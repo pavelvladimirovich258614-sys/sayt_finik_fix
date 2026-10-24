@@ -111,3 +111,33 @@ h2{position:relative}.eyebrow:before{content:"";display:inline-block;width:26px;
  .dd-m{position:static;opacity:1;visibility:visible;transform:none;width:100%;min-width:0;display:none;border:0;border-left:2px solid var(--line2);border-radius:0;box-shadow:none;background:none;margin:0 0 6px 12px;padding:2px 0 2px 8px}.dd.open .dd-m{display:block}
  #nav .nav-cta{margin:8px 0 0;text-align:center}}
 @media(prefers-reduced-motion:reduce){.hero .reveal,.track,.ring,.fcard,.orb{animation:none!important}}
+
+/* ===== v3: единый стиль кнопок (как у карточек-клеточек: обводка, подсветка, свечение за курсором) ===== */
+:root{--glow:rgba(255,122,26,.28)}
+.btn,.tel,.float a,.burger,.dd-b{-webkit-tap-highlight-color:transparent}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.25;min-height:50px;padding:13px 24px;border-radius:14px;border:1.5px solid var(--ac2);color:#16110b;font-weight:700;overflow:hidden;isolation:isolate;
+ background:linear-gradient(180deg,var(--ac2),var(--ac));
+ box-shadow:0 0 0 1px rgba(255,122,26,.35),0 8px 24px var(--glow),inset 0 1px 0 rgba(255,255,255,.35);
+ transition:transform .22s,box-shadow .25s,border-color .25s,background-color .25s,color .2s}
+.btn:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--ac2),0 0 0 5px rgba(255,122,26,.16),0 14px 34px rgba(255,122,26,.42),inset 0 1px 0 rgba(255,255,255,.45);
+ background:radial-gradient(180px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.38),transparent 65%),linear-gradient(180deg,var(--ac2),var(--ac))}
+.btn:active{transform:translateY(0) scale(.97);box-shadow:0 0 0 1px var(--ac),0 4px 14px var(--glow)}
+.btn.ghost,.tel{color:var(--tx);border:1.5px solid var(--line2);background:var(--card);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+.btn.ghost:hover,.tel:hover{color:#fff;border-color:var(--ac);transform:translateY(-3px);
+ background:radial-gradient(200px circle at var(--mx,50%) var(--my,0%),rgba(255,122,26,.22),transparent 70%),var(--card);
+ box-shadow:0 0 0 4px rgba(255,122,26,.13),0 12px 30px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,122,26,.25)}
+.btn.sm{min-height:42px;padding:9px 16px;font-size:15px;border-radius:12px}
+.btn:not(.ghost):not(.sm):after{display:block}
+.btn:disabled{opacity:.6;cursor:wait;transform:none}
+.tel{display:inline-flex;align-items:center;min-height:42px;padding:8px 16px;border-radius:99px;position:relative;overflow:hidden}
+#nav .nav-cta{color:#16110b}
+.float a{border:1.5px solid rgba(255,255,255,.35);transition:transform .22s,box-shadow .25s}
+.float .wa{background:linear-gradient(180deg,#2bd16b,#17a24f);box-shadow:0 0 0 1px rgba(43,209,107,.5),0 8px 22px rgba(31,168,85,.45)}
+.float .tg{background:linear-gradient(180deg,#38b6ec,#1b8ac2);box-shadow:0 0 0 1px rgba(56,182,236,.5),0 8px 22px rgba(34,158,217,.45)}
+.float a:hover{transform:translateY(-3px) scale(1.07)}.float .wa:hover{box-shadow:0 0 0 5px rgba(43,209,107,.2),0 12px 28px rgba(31,168,85,.6)}.float .tg:hover{box-shadow:0 0 0 5px rgba(56,182,236,.2),0 12px 28px rgba(34,158,217,.6)}
+.burger,.dd-b{transition:border-color .2s,box-shadow .2s,background .2s}.burger{border:1.5px solid var(--line2);background:var(--card);border-radius:12px}.burger:hover,.burger[aria-expanded=true]{border-color:var(--ac);box-shadow:0 0 0 4px rgba(255,122,26,.13)}
+.faq summary{transition:color .2s}.faq details{transition:border-color .25s,box-shadow .25s}.faq details:hover{border-color:var(--line2)}.faq details[open]{box-shadow:0 0 0 3px rgba(255,122,26,.1)}
+.btn:focus-visible,.tel:focus-visible,.float a:focus-visible{outline:2px solid #fff;outline-offset:3px}
+@media(hover:none){.btn:hover,.btn.ghost:hover,.tel:hover{transform:none}}
+@media(max-width:560px){.acts .btn{flex:1 1 100%}.btn{min-height:52px}}
+@media(max-width:860px){.tel{display:none}}
