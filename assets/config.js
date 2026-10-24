@@ -6,9 +6,10 @@ window.FF = {
   telegram: "https://t.me/+79016624589",
   telegramChannel: "https://t.me/finik_fix",
   vk: "https://vk.ru/finik_fix",
-  avito: "https://www.avito.ru/",           // TODO: вставить ссылку на портфолио/профиль Авито
+  avito: "https://www.avito.ru/user/03b95aa6aaecf41a989c9ba04bf9de85/portfolio",
   hours: "пн–пт 10:00–20:00",
   place: "15-й микрорайон, мастерская по записи",
+  avitoAd: "https://www.avito.ru/angarsk/predlozheniya_uslug/remont_smartfonov_i_planshetov_8158317905",
   inn: "",                                   // ИНН самозанятого: если пусто, в подвале не выводится
   endpoint: "",                              // URL обработчика заявок (Telegram-бот/почта). Пусто = заявка уходит в Telegram-чат мастера
   preset: "Здравствуйте! Хочу узнать по ремонту...",

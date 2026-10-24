@@ -9,6 +9,7 @@
   document.querySelectorAll("[data-vk]").forEach(function (a) { a.href = C.vk; });
   document.querySelectorAll("[data-ch]").forEach(function (a) { a.href = C.telegramChannel; });
   document.querySelectorAll("[data-avito]").forEach(function (a) { a.href = C.avito; a.target = "_blank"; a.rel = "noopener"; });
+  document.querySelectorAll("[data-avito-ad]").forEach(function (a) { a.href = C.avitoAd; });
   document.querySelectorAll("[data-hours]").forEach(function (e) { e.textContent = C.hours; });
   document.querySelectorAll("[data-place]").forEach(function (e) { e.textContent = C.place; });
   document.querySelectorAll("[data-inn]").forEach(function (e) {
