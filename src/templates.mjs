@@ -127,9 +127,7 @@ export function homePage(o) {
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li><li>Приём по записи</li></ul>
   </div>
   <div class="hero-visual reveal"><span class="ring" aria-hidden="true"></span>${photoBlock(o, "hero-photo")}
-    <div class="fcard f1"><b>10+</b><span>лет с консолями</span></div>
-    <div class="fcard f2"><b>90</b><span>дней гарантии</span></div>
-    <div class="fcard f3"><b>4,8 ★</b><span>60 отзывов на Авито</span></div>
+    <div class="fcards"><div class="fcard f1"><b>10+</b><span>лет с консолями</span></div><div class="fcard f2"><b>90</b><span>дней гарантии</span></div><div class="fcard f3"><b>4,8 ★</b><span>60 отзывов на Авито</span></div></div>
   </div>
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
