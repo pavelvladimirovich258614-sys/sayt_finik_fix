@@ -141,3 +141,13 @@ h2{position:relative}.eyebrow:before{content:"";display:inline-block;width:26px;
 @media(hover:none){.btn:hover,.btn.ghost:hover,.tel:hover{transform:none}}
 @media(max-width:560px){.acts .btn{flex:1 1 100%}.btn{min-height:52px}}
 @media(max-width:860px){.tel{display:none}}
+
+/* ===== v4: сетка из клеток на всём фоне (та же, что в первом экране) ===== */
+:root{--cell:48px;--cell-line:rgba(255,255,255,.04)}
+body{background-color:var(--bg);background-image:linear-gradient(var(--cell-line) 1px,transparent 1px),linear-gradient(90deg,var(--cell-line) 1px,transparent 1px);background-size:var(--cell) var(--cell)}
+.hero{background:none}
+section.alt{background:rgba(16,20,27,.4)}
+.ftr{background:rgba(16,20,27,.78)}
+.marquee{background:rgba(16,20,27,.7)}
+.hdr{background:rgba(11,13,18,.85)}.hdr.scrolled{background:rgba(11,13,18,.95)}
+@media(max-width:560px){:root{--cell:40px}}
