@@ -9,8 +9,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "public");
 const siteUrl = process.env.SITE_URL || ""; // [Уточнить: домен], например https://finikfix.ru
 const metrika = process.env.METRIKA_ID || ""; // [Уточнить: номер счётчика Яндекс.Метрики]
-const hasPhoto = existsSync(join(root, "src/assets/img", site.photo));
-const o = { hasPhoto, metrika, siteUrl };
+const photoFile = ["master.webp", "master.jpg", "master.jpeg", "master.png"].find((f) => existsSync(join(root, "src/assets/img", f)));
+const hasPhoto = !!photoFile;
+const o = { hasPhoto, photoFile, metrika, siteUrl };
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -44,4 +45,4 @@ if (siteUrl) {
 }
 writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /spasibo/\nDisallow: /api/\n${siteUrl ? `Sitemap: ${siteUrl.replace(/\/$/, "")}/sitemap.xml\n` : ""}`);
 
-console.log(`Собрано страниц: ${pages.length + 1}. Фото мастера: ${hasPhoto ? "есть" : "НЕТ (src/assets/img/" + site.photo + ")"}. SITE_URL: ${siteUrl || "не задан"}. Метрика: ${metrika || "не задана"}.`);
+console.log(`Собрано страниц: ${pages.length + 1}. Фото мастера: ${hasPhoto ? "есть" : "НЕТ (положите src/assets/img/master.jpg|png|webp)"}. SITE_URL: ${siteUrl || "не задан"}. Метрика: ${metrika || "не задана"}.`);

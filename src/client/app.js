@@ -7,8 +7,44 @@
   var b = $("#burger"), nav = $("#nav");
   if (b) {
     b.addEventListener("click", function () { var o = nav.classList.toggle("open"); b.setAttribute("aria-expanded", o); });
-    nav.addEventListener("click", function (e) { if (e.target.tagName === "A") { nav.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
+    nav.addEventListener("click", function (e) {
+      var t = e.target.closest("a"); if (t) { nav.classList.remove("open"); b.setAttribute("aria-expanded", false); }
+    });
+    document.querySelectorAll(".dd-b").forEach(function (d) {
+      d.addEventListener("click", function () { var o = d.parentNode.classList.toggle("open"); d.setAttribute("aria-expanded", o); });
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { nav.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
   }
+
+  // Шапка при прокрутке и индикатор чтения
+  var hdr = $(".hdr"), pr = $("#progress");
+  var onScroll = function () {
+    var y = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+    if (hdr) hdr.classList.toggle("scrolled", y > 8);
+    if (pr) pr.style.width = (h > 0 ? Math.min(100, y / h * 100) : 0) + "%";
+  };
+  window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+  // Активный пункт меню на главной по разделу, который на экране
+  if (location.pathname === "/" && "IntersectionObserver" in window) {
+    var links = {};
+    nav.querySelectorAll('a[href^="/#"]').forEach(function (a) { links[a.getAttribute("href").slice(2)] = a; });
+    var so = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        Object.keys(links).forEach(function (k) { links[k].removeAttribute("aria-current"); });
+        if (links[e.target.id]) links[e.target.id].setAttribute("aria-current", "true");
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    Object.keys(links).forEach(function (k) { var el = document.getElementById(k); if (el) so.observe(el); });
+  }
+
+  // Свечение карточек за курсором
+  document.querySelectorAll(".tile").forEach(function (c) {
+    c.addEventListener("pointermove", function (e) { var r = c.getBoundingClientRect(); c.style.setProperty("--mx", (e.clientX - r.left) + "px"); c.style.setProperty("--my", (e.clientY - r.top) + "px"); });
+  });
+  // Каскад появления внутри сеток
+  document.querySelectorAll(".grid").forEach(function (g) { Array.prototype.forEach.call(g.children, function (c, i) { c.style.setProperty("--i", i % 6); }); });
 
   // Появление блоков при прокрутке
   var els = document.querySelectorAll(".reveal");

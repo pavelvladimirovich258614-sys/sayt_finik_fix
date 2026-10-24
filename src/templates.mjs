@@ -15,9 +15,9 @@ export const faqBlock = (faq) => `<div class="faq">${faq.map(([q, a]) => `<detai
 
 export const noInternet = `<div class="card warn reveal"><span class="tag">Чего я НЕ делаю</span><h3>Не настраиваю интернет на дому</h3><p>Только ремонт цифровой техники. Выезд возможен по договорённости, но не для настройки интернета.</p></div>`;
 
-export function photoBlock(hasPhoto, cls = "") {
-  return hasPhoto
-    ? `<figure class="photo ${cls}"><img src="/assets/img/${site.photo}" alt="Мастер FinikFix, Ангарск" width="640" height="800" loading="eager"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
+export function photoBlock(o, cls = "") {
+  return o.hasPhoto
+    ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}" alt="Никита, мастер FinikFix, Ангарск" width="800" height="1000" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
     : `<figure class="photo ph ${cls}"><div><b>ff</b><span>Здесь будет фото мастера</span></div></figure>`;
 }
 
@@ -54,7 +54,14 @@ export function calcSection() {
   </div></section>`;
 }
 
-const nav = [["/#services", "Услуги"], ["/ceny/", "Цены"], ["/#calc", "Калькулятор"], ["/skupka/", "Скупка"], ["/o-mastere/", "О мастере"], ["/otzyvy/", "Отзывы"], ["/kontakty/", "Контакты"]];
+const navMain = [["/ceny/", "Цены"], ["/#calc", "Калькулятор"], ["/o-mastere/", "О мастере"], ["/otzyvy/", "Отзывы"], ["/kontakty/", "Контакты"]];
+const svcLinks = () => [...categories.map((c) => [`/${c.slug}/`, c.cat]), ...narrow.map((n) => [`/${n.slug}/`, n.h1.replace(/ в Ангарске$/, "")]), ["/vosstanovlennaya-tekhnika/", "Восстановленная техника"]];
+function navHtml(path) {
+  const svc = svcLinks();
+  const inSvc = svc.some(([h]) => h === path);
+  return `<div class="dd"><a class="dd-t" href="/#services"${inSvc ? ' aria-current="true"' : ""}>Услуги</a><button class="dd-b" aria-label="Список услуг" aria-expanded="false"><i></i></button><div class="dd-m">${svc.map(([h, t]) => `<a href="${h}"${h === path ? ' aria-current="page"' : ""}>${esc(t)}</a>`).join("")}</div></div>` +
+    navMain.map(([h, t]) => `<a href="${h}"${h === path ? ' aria-current="page"' : ""}>${t}</a>`).join("");
+}
 
 export function layout({ path, title, desc, body, jsonld = [], hasPhoto, metrika, siteUrl, noindex = false }) {
   const url = siteUrl ? siteUrl.replace(/\/$/, "") + path : "";
@@ -76,9 +83,10 @@ ${noindex ? '<meta name="robots" content="noindex,follow">' : ""}${url ? `<link 
 ${ld}
 </head><body>
 <a class="skip" href="#main">К содержимому</a>
+<div class="progress" id="progress"></div>
 <header class="hdr"><div class="wrap bar">
   <a class="logo" href="/" aria-label="FinikFix, на главную"><span class="mark">ff</span><span>Finik<b>Fix</b></span></a>
-  <nav id="nav" aria-label="Основное">${nav.map(([h, t]) => `<a href="${h}"${h === path ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
+  <nav id="nav" aria-label="Основное">${navHtml(path)}<a class="btn sm nav-cta" href="/#request" data-goal="lead_click">Заявка</a></nav>
   <a class="tel" href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav"><i></i><i></i><i></i></button>
 </div></header>
@@ -110,16 +118,22 @@ export function homePage(o) {
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
   const steps = [["Заявка", "Звоните, пишите в мессенджер или оставьте заявку на сайте."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
-<section class="hero"><div class="wrap hero-grid">
+<section class="hero"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div><div class="wrap hero-grid">
   <div class="hero-txt">
-    <span class="badge reveal">Ангарск · ${site.tagline}</span>
-    <h1 class="reveal">Ремонт консолей и геймпадов <em>в Ангарске</em></h1>
-    <p class="hero-p reveal">Диагностика бесплатно. Гарантия 90 дней. Консоли и геймпады — моя основная специализация: опыт 10+ лет, микроскоп, замеры напряжений. Федеральные сети консоли не берут, я чиню.</p>
+    <span class="kicker reveal"><span class="mark">ff</span> FinikFix · Ангарск · ${site.tagline}</span>
+    <h1 class="reveal"><span class="h1-a">Ремонт консолей</span> <span class="h1-b">и геймпадов</span> <span class="h1-c">в Ангарске</span></h1>
+    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Консоли и геймпады — моя основная специализация: опыт 10+ лет, микроскоп, замеры напряжений. Федеральные сети консоли не берут, я чиню.</p>
     <div class="acts reveal"><a class="btn" href="#request" data-goal="lead_click">Оставить заявку</a><a class="btn ghost" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a><a class="btn ghost" href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp / Telegram</a></div>
-    <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Рейтинг 4,8 · 60 отзывов на Авито</li><li>Чек «Мой налог» по запросу</li></ul>
+    <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li><li>Приём по записи</li></ul>
   </div>
-  ${photoBlock(o.hasPhoto, "reveal hero-photo")}
-</div></section>
+  <div class="hero-visual reveal"><span class="ring" aria-hidden="true"></span>${photoBlock(o, "hero-photo")}
+    <div class="fcard f1"><b>10+</b><span>лет с консолями</span></div>
+    <div class="fcard f2"><b>90</b><span>дней гарантии</span></div>
+    <div class="fcard f3"><b>4,8 ★</b><span>60 отзывов на Авито</span></div>
+  </div>
+</div>
+<div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
+</section>
 
 <section id="services"><div class="wrap">
   <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтирую</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальное делаю в той же мастерской.</p>
@@ -197,7 +211,7 @@ export function aboutPage(o) {
 <section class="page-hero"><div class="wrap two"><div><span class="badge">О мастере</span><h1>Мастер FinikFix: ремонт на совесть</h1>
 <p class="hero-p">Консолями занимаюсь 10+ лет, смартфонами — 3 года. Ремонтирую в мастерской в Ангарске.</p>
 <ul class="ticks"><li>Микроскоп и замеры напряжений</li><li>Ремонт по схемам</li><li>Договор, расписка или акт</li><li>Гарантия 90 дней</li><li>Чек «Мой налог» по запросу</li><li>Специализация: замена HDMI, датчики Холла вместо изношенных стиков, прошивки PS3/PS4/Switch</li></ul>
-<div class="acts">${portfolioBtn()}</div></div>${photoBlock(o.hasPhoto, "reveal")}</div></section>
+<div class="acts">${portfolioBtn()}</div></div>${photoBlock(o, "reveal")}</div></section>
 ${requestSection()}`;
   return layout({ ...o, path: "/o-mastere/", title: pagesOther.about.title, desc: pagesOther.about.desc, body });
 }

@@ -69,3 +69,27 @@ test("API и статика", async () => {
     assert.equal((await fetch(base + "/api/lead")).status, 405);
   } finally { app.close(); }
 });
+
+test("внутренние ссылки и якоря не битые", () => {
+  const ids = (h) => new Set([...h.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
+  for (const f of allHtml()) {
+    const h = readFileSync(f, "utf8");
+    for (const m of h.matchAll(/href="(\/[^"#]*)(#[^"]*)?"/g)) {
+      const [, path, hash] = m;
+      if (path === "/" || path.startsWith("/assets/")) { if (path.startsWith("/assets/")) assert.ok(existsSync(pub(path)), `${f}: ${path}`); }
+      else assert.ok(existsSync(pub(join(path, "index.html"))), `${f}: ${path}`);
+      if (hash && path !== "/" ) { /* якорь на другую страницу */ }
+      const target = path === "/" || path === "" ? readFileSync(pub("index.html"), "utf8") : existsSync(pub(join(path, "index.html"))) ? readFileSync(pub(join(path, "index.html")), "utf8") : "";
+      if (hash && target) assert.ok(ids(target).has(hash.slice(1)), `${f}: ${path}${hash}`);
+    }
+    for (const m of h.matchAll(/href="#([^"]+)"/g)) assert.ok(ids(h).has(m[1]), `${f}: #${m[1]}`);
+  }
+});
+
+test("юридические страницы доступны из подвала и формы", () => {
+  for (const f of allHtml()) {
+    const h = readFileSync(f, "utf8");
+    assert.match(h, /href="\/privacy\/"/, f);
+    assert.match(h, /href="\/consent\/"/, f);
+  }
+});
