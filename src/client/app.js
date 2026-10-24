@@ -1,0 +1,68 @@
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var goal = function (n) { try { if (window.ym && window.__ym) window.ym(window.__ym, "reachGoal", n); } catch (e) {} };
+  var fmt = function (n) { return n.toLocaleString("ru-RU").replace(/[  ]/g, " ") + " ₽"; };
+
+  // Меню
+  var b = $("#burger"), nav = $("#nav");
+  if (b) {
+    b.addEventListener("click", function () { var o = nav.classList.toggle("open"); b.setAttribute("aria-expanded", o); });
+    nav.addEventListener("click", function (e) { if (e.target.tagName === "A") { nav.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
+  }
+
+  // Появление блоков при прокрутке
+  var els = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { threshold: .12 });
+    els.forEach(function (e) { io.observe(e); });
+  } else els.forEach(function (e) { e.classList.add("in"); });
+
+  // Цели Метрики по клику
+  document.addEventListener("click", function (e) { var a = e.target.closest("[data-goal]"); if (a) goal(a.dataset.goal); });
+
+  // Калькулятор
+  var sd = $("#c-dev");
+  if (sd && window.FF) {
+    var G = window.FF.groups, ss = $("#c-srv"), cr = $("#c-res"), cb = $("#c-btn");
+    sd.innerHTML = G.map(function (g, i) { return '<option value="' + i + '">' + g.name + "</option>"; }).join("");
+    var calc = function () {
+      var it = G[sd.value].items[ss.value];
+      cr.textContent = it[1] ? (it[2] ? "" : "от ") + fmt(it[1]) : "Цена — по запросу";
+      cb.dataset.sel = G[sd.value].name + ": " + it[0] + " (" + cr.textContent + ")";
+    };
+    var upd = function () { ss.innerHTML = G[sd.value].items.map(function (it, i) { return '<option value="' + i + '">' + it[0] + "</option>"; }).join(""); calc(); };
+    sd.onchange = upd; ss.onchange = calc; upd();
+    cb.addEventListener("click", function () {
+      var m = $("#f-msg"), c = $("#f-cat");
+      if (m) m.value = "Из калькулятора: " + cb.dataset.sel;
+      if (c) { var g = G[sd.value].name; for (var i = 0; i < c.options.length; i++) if (g.indexOf(c.options[i].text) === 0 || c.options[i].text.indexOf(g.split(" (")[0]) === 0) c.selectedIndex = i; }
+      goal("calc_to_lead");
+    });
+  }
+
+  // Форма
+  var f = $("#lead");
+  if (f) {
+    var ph = $("#f-phone"), res = $("#f-res");
+    ph.addEventListener("input", function () {
+      var d = ph.value.replace(/\D/g, "").replace(/^[78]/, "").slice(0, 10), o = "+7";
+      if (d.length) o += " (" + d.slice(0, 3);
+      if (d.length >= 3) o += ")";
+      if (d.length > 3) o += " " + d.slice(3, 6);
+      if (d.length > 6) o += "-" + d.slice(6, 8);
+      if (d.length > 8) o += "-" + d.slice(8, 10);
+      ph.value = d.length ? o : "";
+    });
+    f.addEventListener("submit", function (e) {
+      e.preventDefault(); res.className = "msg";
+      if ($("#f-hp").value) return;
+      if (!$("#f-ok").checked) { res.className = "msg err"; res.textContent = "Нужно согласие на обработку персональных данных."; return; }
+      if (!$("#f-name").value.trim()) { res.className = "msg err"; res.textContent = "Укажите имя."; return; }
+      if (ph.value.replace(/\D/g, "").length < 11) { res.className = "msg err"; res.textContent = "Введите телефон полностью."; return; }
+      var btn = f.querySelector("button"); btn.disabled = true; res.textContent = "Отправляю…";
+      fetch("/api/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: $("#f-name").value, phone: ph.value, category: $("#f-cat").value, comment: $("#f-msg").value, website: $("#f-hp").value, consent: true, page: location.pathname }) })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); goal("lead"); location.href = "/spasibo/"; })
+        .catch(function () { btn.disabled = false; res.className = "msg err"; res.textContent = "Не удалось отправить. Позвоните или напишите в мессенджер."; });
+    });
+  }
+})();

@@ -1,0 +1,18 @@
+# /etc/systemd/system/finikfix.service
+# [Уточнить: пользователь и путь на сервере] — ниже значения по умолчанию из README
+[Unit]
+Description=FinikFix site
+After=network.target
+
+[Service]
+User=finikfix
+WorkingDirectory=/opt/finikfix
+EnvironmentFile=/opt/finikfix/.env
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/finikfix/data
+
+[Install]
+WantedBy=multi-user.target
