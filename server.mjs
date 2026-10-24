@@ -1,4 +1,5 @@
 // Мини-сервер без зависимостей: отдаёт public/ и принимает заявки на POST /api/lead.
+import "./src/env.mjs";
 // Запуск: node server.mjs   (переменные окружения см. .env.example)
 import { createServer } from "node:http";
 import { readFile, appendFile, mkdir, stat } from "node:fs/promises";

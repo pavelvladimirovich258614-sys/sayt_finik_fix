@@ -16,7 +16,7 @@ const o = { hasPhoto, photoFile, metrika, siteUrl };
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 cpSync(join(root, "src/client"), join(out, "assets"), { recursive: true });
-cpSync(join(root, "src/assets"), join(out, "assets"), { recursive: true });
+if (existsSync(join(root, "src/assets"))) cpSync(join(root, "src/assets"), join(out, "assets"), { recursive: true });
 
 const pages = [
   ["/", t.homePage(o)],

@@ -38,10 +38,10 @@ sudo -u finikfix cp .env.example .env
 sudo -u finikfix nano .env      # SITE_URL, METRIKA_ID, SITE_INN, TG_BOT_TOKEN, TG_CHAT_ID
 
 # 3. Фото мастера: скопировать в src/assets/img/master.jpg, затем
-sudo -u finikfix npm run build   # SITE_URL и др. подхватываются из окружения
+sudo -u finikfix npm run build   # SITE_URL и др. берутся из .env
 ```
 
-`npm run build` читает переменные окружения. Чтобы подхватить `.env`, собирайте так: `set -a; . ./.env; set +a; npm run build`.
+Файл `.env` читается автоматически и при сборке, и при запуске (на Windows тоже).
 
 ```bash
 # 4. Сервис
@@ -56,7 +56,7 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d finikfix.ru -d www.finikfix.ru
 ```
 
-Обновление: `git pull`, `set -a; . ./.env; set +a; npm run build`.
+Обновление: `git pull && npm run build`.
 
 ## Заявки
 
