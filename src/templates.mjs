@@ -17,7 +17,7 @@ export const noInternet = `<div class="card warn reveal"><span class="tag">Че�
 
 export function photoBlock(o, cls = "") {
   return o.hasPhoto
-    ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}" alt="Никита, мастер FinikFix, Ангарск" width="800" height="1000" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
+    ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}" alt="Никита, мастер FinikFix, Ангарск" width="1200" height="900" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
     : `<figure class="photo ph ${cls}"><div><b>ff</b><span>Здесь будет фото мастера</span></div></figure>`;
 }
 

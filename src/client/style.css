@@ -151,3 +151,20 @@ section.alt{background:rgba(16,20,27,.4)}
 .marquee{background:rgba(16,20,27,.7)}
 .hdr{background:rgba(11,13,18,.85)}.hdr.scrolled{background:rgba(11,13,18,.95)}
 @media(max-width:560px){:root{--cell:40px}}
+
+/* ===== v5: горизонтальное фото мастера (4:3) ===== */
+.photo img,.hero-photo img{aspect-ratio:4/3;object-fit:cover;object-position:42% 18%}
+.photo.ph div,.hero-photo.ph div{aspect-ratio:4/3}
+.hero-grid{grid-template-columns:.95fr 1.05fr}
+.hero-visual{max-width:600px}
+.hero-photo{border-radius:22px;overflow:visible}
+.hero-photo img{border-radius:22px;border:1.5px solid rgba(255,122,26,.55);box-shadow:0 0 0 6px rgba(255,122,26,.08),0 24px 60px rgba(0,0,0,.6),0 0 70px rgba(255,122,26,.18);
+ -webkit-mask-image:none;mask-image:none;filter:none}
+.hero-visual:after{content:"";position:absolute;inset:0;border-radius:22px;pointer-events:none;background:linear-gradient(90deg,rgba(11,13,18,.55),transparent 22%),linear-gradient(0deg,rgba(11,13,18,.65),transparent 30%)}
+.hero-photo figcaption{z-index:2;bottom:14px;left:18px;transform:none}
+.ring{inset:-8% -6% -6% -6%;border-radius:36px;animation:none;border:2px dashed rgba(255,122,26,.35)}.ring:after{display:none}
+.fcard{z-index:3}.f1{left:-5%;top:10%}.f2{right:-3%;top:44%}.f3{left:4%;bottom:18%}
+@media(max-width:860px){.hero-grid{grid-template-columns:1fr}.hero-visual{max-width:none}.ring{display:none}}
+.hero h1{font-size:clamp(34px,4.9vw,60px)}
+.f1{left:-6%;top:5%}.f2{right:-4%;top:auto;bottom:9%}.f3{left:-3%;bottom:4%}
+@media(max-width:860px){.hero h1{font-size:clamp(34px,9vw,52px)}.f1{left:2%;top:4%}.f2{right:2%;bottom:6%}.f3{display:none}}
