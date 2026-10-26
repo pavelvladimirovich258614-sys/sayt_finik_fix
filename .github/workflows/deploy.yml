@@ -1,0 +1,105 @@
+name: Deploy FinikFix
+
+# Только ручной запуск: Actions → Deploy FinikFix → Run workflow.
+# Автоматический деплой каждого коммита намеренно НЕ включён (см. deploy/VPS.md).
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy — выложить выбранную ветку; rollback — вернуться на предыдущий релиз"
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+
+permissions:
+  contents: read
+
+# Два деплоя одновременно не запускаются (на сервере есть ещё и flock).
+concurrency:
+  group: finikfix-deploy
+  cancel-in-progress: false
+
+env:
+  FINIKFIX_HOST: 194.34.239.218
+  FINIKFIX_USER: deploy
+
+jobs:
+  test:
+    if: inputs.action == 'deploy'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run build
+      - run: npm test
+
+  deploy:
+    needs: [test]
+    # rollback не требует тестов: job test пропускается, а deploy всё равно запускается
+    if: ${{ !cancelled() && !failure() && (github.ref == 'refs/heads/claude/eager-franklin-ylkaur' || github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH-ключ и проверка отпечатка сервера
+        env:
+          SSH_KEY: ${{ secrets.FINIKFIX_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FINIKFIX_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [ -n "$SSH_KEY" ] || { echo "::error::Не задан секрет FINIKFIX_SSH_KEY"; exit 1; }
+          [ -n "$KNOWN_HOSTS" ] || { echo "::error::Не задан секрет FINIKFIX_KNOWN_HOSTS (строка host key сервера)"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/finikfix_key
+          chmod 600 ~/.ssh/finikfix_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host finikfix
+            HostName ${FINIKFIX_HOST}
+            User ${FINIKFIX_USER}
+            IdentityFile ~/.ssh/finikfix_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ServerAliveInterval 15
+          EOF
+
+      - name: Загрузка релиза
+        if: inputs.action == 'deploy'
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD)"
+          echo "Деплой коммита $SHA ($GITHUB_REF_NAME)"
+          git archive --format=tar.gz -o /tmp/release.tar.gz HEAD
+          ssh -T finikfix "cat > /opt/finikfix/incoming/rel-${SHA}.tar.gz.part && mv /opt/finikfix/incoming/rel-${SHA}.tar.gz.part /opt/finikfix/incoming/rel-${SHA}.tar.gz" < /tmp/release.tar.gz
+
+      - name: Выкладка (сборка, проверка, переключение, откат при ошибке)
+        run: |
+          set -euo pipefail
+          ssh -T finikfix "cat > /opt/finikfix/incoming/remote-deploy.sh" < deploy/remote-deploy.sh
+          if [ "${{ inputs.action }}" = "rollback" ]; then
+            ssh -T finikfix "bash /opt/finikfix/incoming/remote-deploy.sh rollback"
+          else
+            ssh -T finikfix "bash /opt/finikfix/incoming/remote-deploy.sh deploy $(git rev-parse HEAD)"
+          fi
+
+      - name: Проверка снаружи (HTTP по IP)
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS -m 10 "http://${FINIKFIX_HOST}/" -o /tmp/index.html; then break; fi; sleep 5
+          done
+          grep -q "hc-ph" /tmp/index.html || { echo "::error::На главной нет блока Hero C"; exit 1; }
+          curl -fsS -m 10 -o /dev/null "http://${FINIKFIX_HOST}/assets/fonts/unbounded-cyr.woff2"
+          curl -fsS -m 10 -o /dev/null "http://${FINIKFIX_HOST}/assets/img/master.webp"
+          code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "http://${FINIKFIX_HOST}/api/lead")"
+          [ "$code" = "503" ] || { echo "::error::POST /api/lead по HTTP должен быть закрыт (503), получено $code"; exit 1; }
+          echo "OK: сайт отвечает, заявки по HTTP закрыты"
+
+      - name: Удаление ключа
+        if: always()
+        run: rm -f ~/.ssh/finikfix_key ~/.ssh/known_hosts ~/.ssh/config /tmp/release.tar.gz

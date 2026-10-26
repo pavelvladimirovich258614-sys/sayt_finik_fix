@@ -1,0 +1,21 @@
+name: CI
+
+# Проверка сборки и тестов. Ничего не публикует.
+on:
+  push:
+    branches: [claude/eager-franklin-ylkaur]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run build
+      - run: npm test
