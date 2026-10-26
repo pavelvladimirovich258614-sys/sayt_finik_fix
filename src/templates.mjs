@@ -1,4 +1,5 @@
 import { site, prices, priceGroups, shop, categories, narrow, pagesOther } from "./data.mjs";
+import { icon } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
 export const priceText = ([, p, fixed]) => (p == null ? "по запросу" : (fixed ? "" : "от ") + rub(p));
@@ -19,6 +20,12 @@ export function photoBlock(o, cls = "") {
   return o.hasPhoto
     ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}?v=${o.photoVer}"${o.hasPhotoSm ? ` srcset="/assets/img/master-640.webp?v=${o.photoVer} 640w, /assets/img/${o.photoFile}?v=${o.photoVer} 1024w" sizes="(max-width:860px) 92vw, 560px"` : ""} alt="Никита, мастер FinikFix, Ангарск" width="1024" height="1024" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
     : `<figure class="photo ph ${cls}"><div><b>ff</b><span>Здесь будет фото мастера</span></div></figure>`;
+}
+
+export function heroImage(o) {
+  if (!o.hasPhoto) return `<div class="hc-ph ph"><div><b>ff</b><span>Здесь будет фото мастера</span></div></div>`;
+  const v = `?v=${o.photoVer}`;
+  return `<div class="hc-ph"><img src="/assets/img/${o.photoFile}${v}"${o.hasPhotoSm ? ` srcset="/assets/img/master-640.webp${v} 640w, /assets/img/${o.photoFile}${v} 1024w" sizes="(max-width:1000px) 100vw, 760px"` : ""} alt="Никита, мастер FinikFix, Ангарск" width="1024" height="1024" fetchpriority="high"></div>`;
 }
 
 export function leadForm(defaultCat = "") {
@@ -79,6 +86,8 @@ export function layout({ path, title, desc, body, jsonld = [], hasPhoto, metrika
 ${noindex ? '<meta name="robots" content="noindex,follow">' : ""}${url ? `<link rel="canonical" href="${url}">` : ""}
 <meta name="theme-color" content="#0b0d12"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:type" content="website"><meta property="og:locale" content="ru_RU">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/unbounded-cyr.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/onest-cyr.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
 ${ld}
 </head><body>
@@ -113,21 +122,26 @@ const crumbs = (cur) => `<nav class="crumbs wrap" aria-label="Навигация
 const faqLd = (faq) => ({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
 const serviceLd = (name, desc) => ({ "@context": "https://schema.org", "@type": "Service", name, description: desc, provider: { "@type": "LocalBusiness", name: site.brand, telephone: site.phoneRaw }, areaServed: site.city });
 
+const tileIcons = { "remont-playstation": "ps", "remont-xbox": "xbox", "remont-nintendo": "switch", "remont-gamepadov": "gamepad", "remont-noutbukov": "laptop", "remont-smartfonov": "phone", "remont-pk": "pc" };
+const problemIcons = ["stick", "hdmi", "fan", "power", "battery"];
+const stepIcons = ["chat", "search", "tag", "shield"];
+const tools = [["scope", "Микроскоп"], ["meter", "Замеры напряжений"], ["chip", "Работа по схемам"], ["code", "Прошивки PS3/PS4/Switch"]];
+
 export function homePage(o) {
-  const tiles = [...categories.filter((c) => c.slug !== "skupka").map((c) => [`/${c.slug}/`, c.cat, c.intro.split(". ")[0] + ".", c.icon]), ["/vosstanovlennaya-tekhnika/", "Восстановленная техника", "Куплено, отремонтировано, с гарантией 90 дней.", "♻"]];
+  const tiles = [...categories.filter((c) => c.slug !== "skupka").map((c) => [`/${c.slug}/`, c.cat, c.intro.split(". ")[0] + ".", tileIcons[c.slug] || "chip"]), ["/vosstanovlennaya-tekhnika/", "Восстановленная техника", "Куплено, отремонтировано, с гарантией 90 дней.", "recycle"]];
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
   const steps = [["Заявка", "Звоните, пишите в мессенджер или оставьте заявку на сайте."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
-<section class="hero"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div><div class="wrap hero-grid">
-  <div class="hero-txt">
+<section class="hero hero-c"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
+${heroImage(o)}
+<div class="wrap hc-grid">
+  <div class="hc-txt">
     <span class="kicker reveal"><span class="mark">ff</span> FinikFix · Ангарск · ${site.tagline}</span>
-    <h1 class="reveal"><span class="h1-a">Ремонт консолей</span> <span class="h1-b">и геймпадов</span> <span class="h1-c">в Ангарске</span></h1>
-    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Консоли и геймпады — моя основная специализация: опыт 10+ лет, микроскоп, замеры напряжений. Федеральные сети консоли не берут, я чиню.</p>
+    <h1 class="reveal">Ремонт <span class="o">консолей</span> и геймпадов в Ангарске</h1>
+    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет, микроскоп, замеры напряжений. Федеральные сети консоли не берут, я чиню.</p>
     <div class="acts reveal"><a class="btn" href="#request" data-goal="lead_click">Оставить заявку</a><a class="btn ghost" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a><a class="btn ghost" href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp / Telegram</a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li><li>Приём по записи</li></ul>
-  </div>
-  <div class="hero-visual reveal"><span class="ring" aria-hidden="true"></span>${photoBlock(o, "hero-photo")}
-    <div class="fcards"><div class="fcard f1"><b>10+</b><span>лет с консолями</span></div><div class="fcard f2"><b>90</b><span>дней гарантии</span></div><div class="fcard f3"><b>4,8 ★</b><span>60 отзывов на Авито</span></div></div>
+    <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>60 отзывов на Авито</span></li></ul>
   </div>
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
@@ -135,17 +149,18 @@ export function homePage(o) {
 
 <section id="services"><div class="wrap">
   <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтирую</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальное делаю в той же мастерской.</p>
-  <div class="grid">${tiles.map(([h, t, p, ic]) => `<a class="card tile reveal" href="${h}"><span class="ico">${ic}</span><h3>${esc(t)}</h3><p>${esc(p)}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
+  <div class="grid">${tiles.map(([h, t, p, ic]) => `<a class="card tile reveal" href="${h}"><span class="ico">${icon(ic, 26)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
 </div></section>
 
 <section class="alt"><div class="wrap">
   <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Оставьте заявку — цену назову после бесплатной диагностики.</p>
-  <div class="grid">${problems.map(([h, t, p]) => `<a class="card tile reveal" href="${h}"><h3>${esc(t)}</h3><p>${esc(p)}</p><span class="more">Читать →</span></a>`).join("")}</div>
+  <div class="grid five">${problems.map(([h, t, p], i) => `<a class="card tile prob reveal" href="${h}"><span class="ico lg">${icon(problemIcons[i], 34)}</span><h3>${esc(t)}</h3><p>${esc(p).replace(/(\d) (\d)/g, "$1\u00a0$2").replace(/ ₽/g, "\u00a0₽")}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
 </div></section>
 
 <section><div class="wrap">
   <span class="eyebrow reveal">Процесс</span><h2 class="reveal">Как я работаю</h2><p class="lead reveal">Без сюрпризов в цене.</p>
-  <div class="grid steps">${steps.map(([t, p]) => `<div class="card reveal"><h3>${t}</h3><p>${p}</p></div>`).join("")}</div>
+  <div class="grid steps">${steps.map(([t, p], i) => `<div class="card reveal"><span class="sico">${icon(stepIcons[i], 30)}</span><h3>${t}</h3><p>${p}</p></div>`).join("")}</div>
+  <div class="tools reveal"><h3>Как я ремонтирую</h3><ul>${tools.map(([ic, t]) => `<li>${icon(ic, 34)}<span>${t}</span></li>`).join("")}</ul></div>
 </div></section>
 
 <section class="alt"><div class="wrap two">
