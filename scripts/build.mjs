@@ -1,5 +1,6 @@
 // Сборка статического сайта: node scripts/build.mjs  →  public/
 import { mkdirSync, rmSync, writeFileSync, cpSync, existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { site, categories, narrow } from "../src/data.mjs";
@@ -9,9 +10,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "public");
 const siteUrl = process.env.SITE_URL || ""; // [Уточнить: домен], например https://finikfix.ru
 const metrika = process.env.METRIKA_ID || ""; // [Уточнить: номер счётчика Яндекс.Метрики]
-const photoFile = ["master.webp", "master.jpg", "master.jpeg", "master.png"].find((f) => existsSync(join(root, "src/assets/img", f)));
-const hasPhoto = !!photoFile;
-const o = { hasPhoto, photoFile, metrika, siteUrl };
+// Фото мастера: единственный источник — src/assets/img/master.webp (+ master-640.webp для мобильных). Другие форматы не подхватываются.
+const photoFile = "master.webp";
+const photoPath = join(root, "src/assets/img", photoFile);
+const hasPhoto = existsSync(photoPath);
+const photoVer = hasPhoto ? createHash("md5").update(readFileSync(photoPath)).digest("hex").slice(0, 8) : ""; // сбрасывает кэш браузера при замене фото
+const hasPhotoSm = existsSync(join(root, "src/assets/img/master-640.webp"));
+const o = { hasPhoto, photoFile, photoVer, hasPhotoSm, metrika, siteUrl };
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -45,4 +50,4 @@ if (siteUrl) {
 }
 writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /spasibo/\nDisallow: /api/\n${siteUrl ? `Sitemap: ${siteUrl.replace(/\/$/, "")}/sitemap.xml\n` : ""}`);
 
-console.log(`Собрано страниц: ${pages.length + 1}. Фото мастера: ${hasPhoto ? "есть" : "НЕТ (положите src/assets/img/master.jpg|png|webp)"}. SITE_URL: ${siteUrl || "не задан"}. Метрика: ${metrika || "не задана"}.`);
+console.log(`Собрано страниц: ${pages.length + 1}. Фото мастера: ${hasPhoto ? "есть" : "НЕТ (положите src/assets/img/master.webp)"}. SITE_URL: ${siteUrl || "не задан"}. Метрика: ${metrika || "не задана"}.`);

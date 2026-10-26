@@ -20,7 +20,7 @@ export const site = {
   owner: "Никита Филиповский",
   preset: "Здравствуйте! Хочу узнать по ремонту...",
   portfolioText: "24+ фото реальных ремонтов — смотрите в портфолио на Авито",
-  photo: "master.jpg", // файл кладётся в src/assets/img/ ([Приложить: фотографию мастера])
+  photo: "master.webp", // src/assets/img/master.webp (1024×1024) и master-640.webp; исходник в design-source/
 };
 
 // price: число (руб., «от»); fixed: true — точная цена, без «от»; null — по запросу
