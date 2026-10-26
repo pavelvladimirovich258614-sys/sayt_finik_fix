@@ -21,7 +21,7 @@
 ## Первичная настройка (один раз, от root, консоль провайдера)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/eager-franklin-ylkaur/deploy/bootstrap-vps.sh -o /root/bootstrap-vps.sh
+curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy/bootstrap-vps.sh -o /root/bootstrap-vps.sh
 less /root/bootstrap-vps.sh
 bash /root/bootstrap-vps.sh
 ```
@@ -42,11 +42,13 @@ Get-Content C:\Users\vin-m\.ssh\finikfix_actions -Raw | gh secret set FINIKFIX_S
 "194.34.239.218 ssh-ed25519 AAAA..." | gh secret set FINIKFIX_KNOWN_HOSTS --repo pavelvladimirovich258614-sys/sayt_finik_fix
 ```
 
+Ожидаемый host key сервера (сверяйте при настройке): `194.34.239.218 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOFzQ+N3gj1Q36bBHMkcuaR8LkasbbarRIPwcW1uxWeF`, отпечаток `SHA256:eqrQdVYY7zi1ooLOv4cIbKev3Ag5Gi0suuDm7+uevCQ`.
+
 Без `gh`: GitHub → репозиторий → Settings → Secrets and variables → Actions → New repository secret.
 
 ## Деплой и откат
 
-Actions → **Deploy FinikFix** → Run workflow (ветка `claude/eager-franklin-ylkaur`), action = `deploy`.
+Actions → **Deploy FinikFix** → Run workflow (ветка `claude/epic-hypatia-mxxztu`), action = `deploy`.
 Шаги: сборка и тесты на GitHub → загрузка архива → на сервере сборка, пробный запуск на порту 3999, переключение `current`, перезапуск, проверка. При ошибке на любом шаге предыдущая версия остаётся или возвращается автоматически.
 
 Откат вручную: тот же workflow, action = `rollback` (возврат на предыдущий релиз).

@@ -3,7 +3,7 @@ name: CI
 # Проверка сборки и тестов. Ничего не публикует.
 on:
   push:
-    branches: [claude/eager-franklin-ylkaur]
+    branches: [claude/epic-hypatia-mxxztu]
   pull_request:
 
 permissions:

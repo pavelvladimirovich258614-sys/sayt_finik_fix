@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Первичная настройка VPS для FinikFix (Ubuntu 24.04). Запускать ОДИН РАЗ от root через консоль провайдера.
 #
-#   curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/eager-franklin-ylkaur/deploy/bootstrap-vps.sh -o /root/bootstrap-vps.sh
+#   curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy/bootstrap-vps.sh -o /root/bootstrap-vps.sh
 #   less /root/bootstrap-vps.sh        # просмотреть
 #   bash /root/bootstrap-vps.sh
 #
@@ -9,7 +9,7 @@
 # SSH-настройки и пользователей. Если находит чужое на порту 80 или чужие сайты nginx — останавливается.
 set -euo pipefail
 
-BRANCH="${FF_BRANCH:-claude/eager-franklin-ylkaur}"
+BRANCH="${FF_BRANCH:-claude/epic-hypatia-mxxztu}"
 REPO="pavelvladimirovich258614-sys/sayt_finik_fix"
 SERVER_IP="${FF_SERVER_IP:-194.34.239.218}"
 BASE=/opt/finikfix

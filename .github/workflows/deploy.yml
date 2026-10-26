@@ -38,7 +38,7 @@ jobs:
   deploy:
     needs: [test]
     # rollback не требует тестов: job test пропускается, а deploy всё равно запускается
-    if: ${{ !cancelled() && !failure() && (github.ref == 'refs/heads/claude/eager-franklin-ylkaur' || github.ref == 'refs/heads/main') }}
+    if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/claude/epic-hypatia-mxxztu' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -78,10 +78,12 @@ jobs:
           ssh -T finikfix "cat > /opt/finikfix/incoming/rel-${SHA}.tar.gz.part && mv /opt/finikfix/incoming/rel-${SHA}.tar.gz.part /opt/finikfix/incoming/rel-${SHA}.tar.gz" < /tmp/release.tar.gz
 
       - name: Выкладка (сборка, проверка, переключение, откат при ошибке)
+        env:
+          ACTION: ${{ inputs.action }}
         run: |
           set -euo pipefail
           ssh -T finikfix "cat > /opt/finikfix/incoming/remote-deploy.sh" < deploy/remote-deploy.sh
-          if [ "${{ inputs.action }}" = "rollback" ]; then
+          if [ "$ACTION" = "rollback" ]; then
             ssh -T finikfix "bash /opt/finikfix/incoming/remote-deploy.sh rollback"
           else
             ssh -T finikfix "bash /opt/finikfix/incoming/remote-deploy.sh deploy $(git rev-parse HEAD)"
