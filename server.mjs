@@ -28,7 +28,7 @@ export function createApp(env = process.env) {
     try {
       const data = await readFile(file);
       const ext = extname(file);
-      res.writeHead(200, { ...sec, "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=86400" });
+      res.writeHead(200, { ...sec, "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": ext === ".html" ? "no-cache" : url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=86400" });
       res.end(req.method === "HEAD" ? undefined : data);
     } catch {
       const nf = await readFile(join(PUBLIC, "404.html")).catch(() => "Not found");

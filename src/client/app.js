@@ -93,9 +93,24 @@
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var cur = 0, timer = null, userPaused = reduce, hover = false, focus = false, hidden = false, offscreen = false, touchUntil = 0;
 
+  // HD не загрузился: возвращаем оригинал (адрес в data-orig), один раз
+  function fallback(img) {
+    var o = img.getAttribute("data-orig");
+    if (!o || img.getAttribute("data-fb")) return;
+    img.setAttribute("data-fb", "1"); img.removeAttribute("srcset"); img.src = o;
+  }
+  function watch(img) {
+    img.addEventListener("error", function () { fallback(img); });
+    if (img.complete && img.naturalWidth === 0 && (img.currentSrc || img.src)) fallback(img);
+  }
   function load(i) {
     var img = slides[i] && slides[i].querySelector("img[data-src]");
-    if (img) { img.src = img.getAttribute("data-src"); img.removeAttribute("data-src"); }
+    if (!img) return;
+    var ss = img.getAttribute("data-srcset");
+    if (ss) img.srcset = ss;
+    img.src = img.getAttribute("data-src");
+    img.removeAttribute("data-src"); img.removeAttribute("data-srcset");
+    if (img.decode) img.decode().catch(function () {}); // декодируем заранее, чтобы смена кадра не мерцала
   }
   function show(i) {
     i = (i + slides.length) % slides.length;
@@ -126,9 +141,7 @@
   });
   if (userPaused) { pp.setAttribute("aria-pressed", "true"); pp.setAttribute("aria-label", "Запустить смену фото"); pp.innerHTML = pp.getAttribute("data-play"); }
 
-  // Наведение мыши и фокус с клавиатуры ставят на паузу
-  stage.addEventListener("mouseenter", function () { hover = true; schedule(); });
-  stage.addEventListener("mouseleave", function () { hover = false; schedule(); });
+  // Мышь слайдер не останавливает; на паузу его ставит только фокус с клавиатуры (и кнопка паузы)
   stage.addEventListener("focusin", function (e) { try { focus = e.target.matches(":focus-visible"); } catch (x) { focus = true; } schedule(); }); // пауза только при фокусе с клавиатуры
   stage.addEventListener("focusout", function () { focus = false; schedule(); });
   stage.addEventListener("keydown", function (e) {
@@ -150,6 +163,7 @@
     new IntersectionObserver(function (en) { offscreen = !en[0].isIntersecting; schedule(); }, { threshold: 0.2 }).observe(stage);
   }
 
+  slides.forEach(function (sl) { var im = sl.querySelector("img"); if (im) watch(im); });
   // Второй кадр подгружаем после загрузки страницы; дальше каждый следующий — заранее при показе предыдущего
   function preload() { load(1); }
   var idle = window.requestIdleCallback || function (f) { setTimeout(f, 1200); };
@@ -214,9 +228,31 @@
       cats.forEach(function (c) { var n = works.filter(function (w) { return w.category === c[0]; }).length; if (n) filters.appendChild(chip(c[1], c[0], n)); });
       render();
     }
+    // Просмотр: автоперелистывание каждые 5 с (если фото больше одного), индикатор загрузки, понятная ошибка
+    var pic = lb.querySelector(".lb-pic"), spin = el("span", "lb-spin"), errBox = el("span", "lb-err", "Не удалось загрузить фото");
+    spin.setAttribute("aria-hidden", "true"); errBox.hidden = true; errBox.setAttribute("role", "status"); pic.appendChild(spin); pic.appendChild(errBox);
+    var lbTimer = null, reduceLb = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function lbStop() { clearInterval(lbTimer); lbTimer = null; }
+    function lbPlay() {
+      lbStop();
+      if (reduceLb || !cur || cur.photos.length < 2) return;
+      lbTimer = setInterval(function () {
+        if (document.hidden || !lb.hasAttribute("open")) return;
+        if (!lb.querySelector("img").complete) return; // текущее фото ещё грузится
+        step(1, true);
+      }, 5000);
+    }
     function show() {
       var p = cur.photos[idx], img = lb.querySelector("img");
-      img.src = p.src; img.alt = cur.title;
+      pic.classList.add("is-loading"); errBox.hidden = true;
+      img.onload = function () { pic.classList.remove("is-loading"); };
+      img.onerror = function () {
+        // если у фото есть отдельная HD-версия и она не открылась, показываем оригинал; иначе сообщаем об ошибке
+        if (p.hd && img.getAttribute("src") === p.hd) { img.src = p.src; return; }
+        pic.classList.remove("is-loading"); errBox.hidden = false;
+      };
+      img.src = p.hd || p.src; img.alt = cur.title;
+      var nx = cur.photos[(idx + 1) % cur.photos.length]; if (nx && nx !== p) { var pre = new Image(); pre.src = nx.src; }
       lb.querySelector(".lb-title").textContent = cur.title;
       lb.querySelector(".lb-badge").textContent = cur.is_real ? "Реальная работа" : "Иллюстрация";
       lb.querySelector(".lb-problem").textContent = cur.problem ? "Проблема: " + cur.problem : "";
@@ -224,14 +260,14 @@
       lb.querySelector(".lb-count").textContent = cur.photos.length > 1 ? (idx + 1) + " из " + cur.photos.length : "";
       lb.querySelector(".lb-prev").hidden = lb.querySelector(".lb-next").hidden = cur.photos.length < 2;
     }
-    function open(w) { cur = w; idx = 0; opener = document.activeElement; show(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); }
-    function step(d) { idx = (idx + d + cur.photos.length) % cur.photos.length; show(); }
+    function open(w) { cur = w; idx = 0; opener = document.activeElement; show(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); lbPlay(); }
+    function step(d, auto) { idx = (idx + d + cur.photos.length) % cur.photos.length; show(); if (!auto) lbPlay(); }
     lb.querySelector(".lb-x").addEventListener("click", function () { lb.close(); });
     lb.querySelector(".lb-prev").addEventListener("click", function () { step(-1); });
     lb.querySelector(".lb-next").addEventListener("click", function () { step(1); });
     lb.addEventListener("click", function (e) { if (e.target === lb) lb.close(); });
     lb.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") step(-1); else if (e.key === "ArrowRight") step(1); });
-    lb.addEventListener("close", function () { if (opener && opener.focus) opener.focus(); });
+    lb.addEventListener("close", function () { lbStop(); if (opener && opener.focus) opener.focus(); });
     draw();
   }).catch(function () { var e = document.getElementById("works-empty"); if (e) e.hidden = false; });
 })();

@@ -4,7 +4,7 @@ import { readFileSync, existsSync, mkdtempSync, readdirSync, statSync } from "no
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createApp } from "../server.mjs";
-import { categories, narrow } from "../src/data.mjs";
+import { categories, narrow, heroSlides } from "../src/data.mjs";
 import { pairTotal } from "../src/pricing.mjs";
 
 const pub = (p) => join(import.meta.dirname, "..", "public", p);
@@ -156,4 +156,40 @@ test("форм заявки нет, кнопки связи на месте: tel
   const home = readFileSync(pub("index.html"), "utf8");
   assert.match(home, /Позвонить/); assert.match(home, /Написать в MAX/); assert.match(home, /Написать в Telegram/);
   assert.doesNotMatch(readFileSync(join(import.meta.dirname, "..", "src/client/app.js"), "utf8"), /api\/lead|f-phone|#lead/);
+});
+
+const webpSize = (f) => {
+  const b = readFileSync(f); assert.equal(b.toString("ascii", 0, 4), "RIFF"); assert.equal(b.toString("ascii", 8, 12), "WEBP");
+  const t = b.toString("ascii", 12, 16);
+  if (t === "VP8X") return [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)];
+  if (t === "VP8 ") return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
+  if (t === "VP8L") { const v = b.readUInt32LE(21); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; }
+  throw new Error("webp?");
+};
+
+test("слайдер: HD 2560×1440 лежит рядом с оригиналом, srcset и резерв на месте", () => {
+  const root = join(import.meta.dirname, "..");
+  const home = readFileSync(pub("index.html"), "utf8");
+  for (const s of heroSlides) {
+    const o = join(root, "src/assets/img/slides", s.file), h = join(root, "src/assets/img/slides-hq", s.file);
+    assert.equal(webpSize(o)[0], s.w, "ширина оригинала в data.mjs: " + s.file);
+    assert.deepEqual(webpSize(h), [2560, 1440], s.file);
+    assert.ok(existsSync(pub("assets/img/slides/" + s.file)) && existsSync(pub("assets/img/slides-hq/" + s.file)), s.file);
+    assert.ok(home.includes(`slides-hq/${s.file}?v=`) && home.includes(` ${s.w}w`) && home.includes(" 2560w"), s.file);
+  }
+  assert.equal((home.match(/data-orig="/g) || []).length, 6);
+  assert.match(home, /<img src="[^"]*slides\/slide-01[^>]*fetchpriority="high"/);
+  const js = readFileSync(join(root, "src/client/app.js"), "utf8");
+  assert.doesNotMatch(js, /mouseenter/, "мышь не должна останавливать слайдер");
+  assert.match(js, /data-orig/);
+});
+
+test("версионные адреса картинок кэшируются надолго", async () => {
+  const app = createApp({ DATA_DIR: mkdtempSync(join(tmpdir(), "ff-")) });
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  try {
+    const m = readFileSync(pub("index.html"), "utf8").match(/\/assets\/img\/slides-hq\/slide-01-playstation\.webp\?v=\w+/)[0];
+    const r = await fetch(`http://127.0.0.1:${app.address().port}${m}`);
+    assert.equal(r.status, 200); assert.match(r.headers.get("cache-control"), /immutable/); assert.equal(r.headers.get("content-type"), "image/webp");
+  } finally { app.closeAllConnections?.(); app.close(); }
 });

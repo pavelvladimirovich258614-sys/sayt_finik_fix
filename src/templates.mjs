@@ -35,14 +35,28 @@ const ctlIcon = {
 
 // Слайдер первого экрана. Первый кадр грузится сразу (fetchpriority=high), остальные подгружает app.js после загрузки страницы (data-src).
 // Версия файла в адресе: при замене фото браузер не показывает старое из кэша.
-const slideUrl = (file) => {
-  const f = new URL("./assets/img/slides/" + file, import.meta.url);
-  let v = ""; try { v = "?v=" + createHash("md5").update(readFileSync(f)).digest("hex").slice(0, 8); } catch {}
-  return "/assets/img/slides/" + file + v;
+const fileVer = (rel) => { try { return "?v=" + createHash("md5").update(readFileSync(new URL(rel, import.meta.url))).digest("hex").slice(0, 8); } catch { return ""; } };
+const HQ_W = 2560;
+// Оригинал (резерв) и HD-версия: браузер сам выбирает подходящую по размеру и плотности экрана; при ошибке HD app.js возвращает оригинал.
+const slideImg = (sl) => {
+  const orig = "/assets/img/slides/" + sl.file + fileVer("./assets/img/slides/" + sl.file);
+  const hqRel = "./assets/img/slides-hq/" + sl.file;
+  let hasHq = true; try { readFileSync(new URL(hqRel, import.meta.url)); } catch { hasHq = false; }
+  const hq = "/assets/img/slides-hq/" + sl.file + fileVer(hqRel);
+  return { src: orig, srcset: hasHq ? `${orig} ${sl.w}w, ${hq} ${HQ_W}w` : "" };
 };
+// Размер слайда в CSS-пикселях с учётом object-fit: cover (кадр 16:9): до 560 px квадрат, до 1100 px — 16:10, шире — рамка высотой ~840 px.
+const SLIDE_SIZES = "(max-width:560px) 178vw, (max-width:1100px) 111vw, 1500px";
 export function heroSlider() {
   const n = heroSlides.length;
-  const slides = heroSlides.map((sl, i) => `<figure class="hs-slide${i ? "" : " is-active"}" role="group" aria-roledescription="слайд" aria-label="${i + 1} из ${n}"${i ? ' aria-hidden="true"' : ""} style="--pos:${sl.pos}"><img ${i ? `data-src="${slideUrl(sl.file)}"` : `src="${slideUrl(sl.file)}" fetchpriority="high"`} alt="${esc(sl.alt)}" width="1600" height="900" decoding="async"></figure>`).join("");
+  const slides = heroSlides.map((sl, i) => {
+    const im = slideImg(sl);
+    const attrs = `sizes="${SLIDE_SIZES}" alt="${esc(sl.alt)}" width="1600" height="900" decoding="async" data-orig="${im.src}"`;
+    const img = i
+      ? `<img data-src="${im.src}"${im.srcset ? ` data-srcset="${im.srcset}"` : ""} ${attrs}>`
+      : `<img src="${im.src}"${im.srcset ? ` srcset="${im.srcset}"` : ""} fetchpriority="high" ${attrs}>`;
+    return `<figure class="hs-slide${i ? "" : " is-active"}" role="group" aria-roledescription="слайд" aria-label="${i + 1} из ${n}"${i ? ' aria-hidden="true"' : ""} style="--pos:${sl.pos}">${img}</figure>`;
+  }).join("");
   const dots = heroSlides.map((_, i) => `<button type="button" class="hs-dot" aria-label="Фото ${i + 1} из ${n}"${i ? "" : ' aria-current="true"'}></button>`).join("");
   return `<div class="hs-stage" role="region" aria-roledescription="карусель" aria-label="Фото мастера FinikFix">
   <div class="hs-slides" data-interval="5000">${slides}</div>

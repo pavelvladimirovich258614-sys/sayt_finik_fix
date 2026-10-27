@@ -387,3 +387,10 @@ h3{font-size:17px;line-height:1.25;font-weight:700}
 .float .fl-max .bi{border-radius:9px}
 .float .bi{display:block}
 @media(max-width:700px){.cbtn{width:100%}.float a{width:48px;height:48px}.float .fl-wa{display:none}}
+
+/* v11: индикатор загрузки и ошибка в просмотре портфолио */
+.lb-spin{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--ac);opacity:0;pointer-events:none;animation:lbspin .8s linear infinite;transition:opacity .15s}
+.lb-pic.is-loading .lb-spin{opacity:1}.lb-pic.is-loading img{opacity:.35}
+.lb-err{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);text-align:center;color:var(--mut)}
+@keyframes lbspin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.lb-spin{animation:none}}

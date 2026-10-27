@@ -100,6 +100,10 @@ jobs:
           grep -q "hc-grid" /tmp/index.html || { echo "::error::На главной нет блока Hero"; exit 1; }
           grep -q 'href="tel:+79016624589"' /tmp/index.html || { echo "::error::На главной нет ссылки tel:"; exit 1; }
           grep -q 'slide-02-xbox.webp' /tmp/index.html || { echo "::error::На главной нет слайда Xbox"; exit 1; }
+          grep -q 'slides-hq/slide-01-playstation.webp' /tmp/index.html || { echo "::error::На главной нет HD-слайдов (srcset)"; exit 1; }
+          for n in 01-playstation 02-xbox 03-nintendo 04-pc 05-laptop 06-gamepads; do
+            curl -fsS -m 20 -o /dev/null "$SITE/assets/img/slides-hq/slide-$n.webp" || { echo "::error::HD-файл slide-$n недоступен"; exit 1; }
+          done
           ! grep -qiE '<form|Оставить заявку|оставьте заявку' /tmp/index.html || { echo "::error::На главной остались следы формы заявки"; exit 1; }
           for p in privacy consent cookies terms mailing portfolio ceny kontakty; do
             curl -fsS -m 15 -o /dev/null "$SITE/$p/" || { echo "::error::Страница /$p/ недоступна"; exit 1; }
