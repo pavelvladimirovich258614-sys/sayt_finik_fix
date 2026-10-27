@@ -367,3 +367,23 @@ h3{font-size:17px;line-height:1.25;font-weight:700}
 @media(max-width:700px){.ck{left:8px;right:8px;bottom:8px;max-width:none}}
 
 @media(max-width:700px){body.ck-on .float{display:none}}
+
+/* v10: прямая связь вместо формы */
+.cbtns{display:flex;flex-wrap:wrap;gap:12px;margin:26px 0 20px}
+.cbtns.stack{flex-direction:column;margin:0}
+.cbtn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:54px;padding:0 22px;border-radius:14px;border:1.5px solid var(--line2);background:linear-gradient(160deg,#1a2230,#11161f);color:var(--tx);font-weight:700;font-size:16px;text-decoration:none;transition:transform .2s,border-color .2s,box-shadow .2s}
+.cbtn:hover{transform:translateY(-2px)}
+.cbtn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.cbtn .bi{flex:none;border-radius:7px}
+.cb-call{background:linear-gradient(180deg,#ff8a2b,#ee6a0a);border-color:rgba(255,162,77,.6);color:#fff;box-shadow:0 8px 24px rgba(255,122,26,.35)}
+.cb-call .bi{border-radius:0}
+.cb-max:hover{border-color:#6a7bff;box-shadow:0 8px 24px rgba(79,107,255,.35)}
+.cb-tg:hover{border-color:#26a5e4;box-shadow:0 8px 24px rgba(38,165,228,.35)}
+.cb-wa:hover{border-color:#25d366;box-shadow:0 8px 24px rgba(37,211,102,.3)}
+.calc .cbtns{margin-top:14px}
+.float a{width:54px;height:54px;display:grid;place-items:center;border-radius:50%;padding:0;font-size:0;border:1.5px solid rgba(255,255,255,.3);background:#141922;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.float .fl-call{background:linear-gradient(180deg,#ff8a2b,#ee6a0a);color:#fff;box-shadow:0 0 0 1px rgba(255,162,77,.5),0 8px 22px rgba(255,122,26,.45)}
+.float .fl-max,.float .fl-tg,.float .fl-wa{background:#fff;border-color:rgba(255,255,255,.9)}
+.float .fl-max .bi{border-radius:9px}
+.float .bi{display:block}
+@media(max-width:700px){.cbtn{width:100%}.float a{width:48px;height:48px}.float .fl-wa{display:none}}

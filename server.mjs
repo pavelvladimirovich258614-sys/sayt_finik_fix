@@ -1,65 +1,25 @@
-// Мини-сервер без зависимостей: отдаёт public/ и принимает заявки на POST /api/lead.
+// Мини-сервер без зависимостей: отдаёт public/, портфолио и админку. Приём заявок через сайт отключён (/api/lead отвечает 503).
 import "./src/env.mjs";
 // Запуск: node server.mjs   (переменные окружения см. .env.example)
 import { createServer } from "node:http";
-import { readFile, appendFile, mkdir, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join, normalize, extname, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createPortfolio } from "./src/portfolio/api.mjs";
-import { createLeadService } from "./src/leads.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(root, "public");
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2", ".xml": "application/xml", ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon" };
 
-export function validateLead(b) {
-  const clean = (v, n) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
-  const phone = clean(b.phone, 30);
-  const lead = { name: clean(b.name, 80), phone, category: clean(b.category, 80), comment: clean(b.comment, 1000), page: clean(b.page, 200) };
-  if (b.website) return { error: "spam" };
-  if (b.consent !== true) return { error: "Нужно согласие на обработку данных" };
-  if (!lead.name) return { error: "Укажите имя" };
-  if (phone.replace(/\D/g, "").length < 11) return { error: "Неверный телефон" };
-  return { lead };
-}
-
-const hits = new Map();
-function limited(ip, max = 5, windowMs = 10 * 60 * 1000) {
-  const now = Date.now(), arr = (hits.get(ip) || []).filter((t) => now - t < windowMs);
-  arr.push(now); hits.set(ip, arr);
-  return arr.length > max;
-}
-
-
 export function createApp(env = process.env) {
   const dataDir = env.DATA_DIR || join(root, "data");
   const portfolio = createPortfolio(env, dataDir);
-  const leads = createLeadService(env, dataDir);
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
     try { if (await portfolio.handle(req, res, url)) return; } catch (e) { console.error("portfolio error", e.message); if (!res.headersSent) { res.writeHead(500, { "Content-Type": "application/json" }); } return res.end('{"ok":false}'); }
     const sec = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY" };
-    if (url.pathname === "/api/lead") {
-      const send = (code, obj) => { res.writeHead(code, { ...sec, "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
-      if (req.method !== "POST") return send(405, { ok: false });
-      const ip = (env.TRUST_PROXY === "1" && String(req.headers["x-forwarded-for"] || "").split(",")[0].trim()) || req.socket.remoteAddress || "?";
-      let raw = ""; let big = false;
-      for await (const ch of req) { raw += ch; if (raw.length > 10_000) { big = true; break; } }
-      if (big) return send(413, { ok: false });
-      let body; try { body = JSON.parse(raw); } catch { return send(400, { ok: false, error: "bad json" }); }
-      if (limited(ip, Number(env.RATE_LIMIT || 5))) return send(429, { ok: false, error: "Слишком много заявок, позвоните нам" });
-      const v = validateLead(body);
-      if (v.error === "spam") return send(200, { ok: true }); // ботам делаем вид, что всё принято
-      if (v.error) return send(400, { ok: false, error: v.error });
-      try {
-        const r = await leads.submit(v.lead);
-        // saved: заявка сохранена на сервере; notified: мастеру ушло уведомление (если нет — оно в очереди на повтор)
-        return send(200, { ok: true, saved: true, notified: r.notified });
-      } catch (e) {
-        if (e.message === "no_channel") return send(503, { ok: false, error: "Приём заявок временно недоступен. Позвоните или напишите в мессенджер." });
-        console.error("save lead failed", e.message); return send(500, { ok: false });
-      }
-    }
+    // Приём заявок через сайт отключён (решение владельца): все запросы к /api/lead получают 503.
+    if (url.pathname === "/api/lead") { res.writeHead(503, { ...sec, "Content-Type": "application/json" }); return res.end(JSON.stringify({ ok: false, error: "Заявки через сайт не принимаются. Позвоните или напишите в мессенджер." })); }
     if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405, sec); return res.end(); }
     let p; try { p = decodeURIComponent(url.pathname); } catch { res.writeHead(400, sec); return res.end(); }
     let file = normalize(join(PUBLIC, p));
@@ -75,7 +35,6 @@ export function createApp(env = process.env) {
       res.writeHead(404, { ...sec, "Content-Type": "text/html; charset=utf-8" }); res.end(nf);
     }
   });
-  server.on("listening", () => leads.startRetryLoop());
   return server;
 }
 

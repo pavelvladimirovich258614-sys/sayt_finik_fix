@@ -1,7 +1,7 @@
 import { pairTotal } from "./pricing.mjs";
 export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
 import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
-import { icon } from "./icons.mjs";
+import { icon, brandIcon, brandDefs } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
 export const priceText = ([, p, fixed]) => (p == null ? "по запросу" : (fixed ? "" : "от ") + rub(p));
@@ -42,8 +42,16 @@ export function heroSlider() {
 </div>`;
 }
 
-const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">MAX</a>` : "");
-const maxBtn = () => (site.max ? `<a class="btn ghost" href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">Написать в MAX</a>` : "");
+const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">MAX</a>` : "");
+// Кнопки прямой связи: звонок, MAX, Telegram (+ WhatsApp по желанию). Форма заявки на сайте не используется.
+export function contactBtns({ wa = false, cls = "" } = {}) {
+  const ext = 'target="_blank" rel="noopener noreferrer" data-goal="messenger"';
+  return `<div class="cbtns${cls ? " " + cls : ""}">` +
+    `<a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить</span></a>` +
+    (site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" ${ext}>${brandIcon("max", 24)}<span>Написать в MAX</span></a>` : "") +
+    `<a class="cbtn cb-tg" href="${esc(site.telegram)}" ${ext}>${brandIcon("tg", 24)}<span>Написать в Telegram</span></a>` +
+    (wa ? `<a class="cbtn cb-wa" href="${waLink}" ${ext}>${brandIcon("wa", 24)}<span>WhatsApp</span></a>` : "") + `</div>`;
+}
 const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
 
 // Сравнение стиков и акция. Цены указаны за ОДИН аналог (подтверждено заказчиком); цены только «от».
@@ -70,6 +78,7 @@ export function sticksBlock() {
         <dl class="promo-res" aria-live="polite"><div><dt>Сумма</dt><dd id="pr-sum">от ${fmtRub(r.sum)}</dd></div><div><dt>Скидка ${promos.pairDiscount.percent}%</dt><dd id="pr-disc">−${fmtRub(r.discount)}</dd></div><div class="tot"><dt>Итого</dt><dd id="pr-total">от ${fmtRub(r.total)}</dd></div></dl>
       </div>
       <p class="note">Цены «от», поэтому итог тоже «от»: точную стоимость называю после бесплатной диагностики.</p>
+      ${contactBtns()}
     </div>
   </div>
   <p class="free-clean reveal">${icon("shield", 22)}<span><b>Бесплатная внутренняя чистка.</b> ${esc(promos.freeCleaning.text)}</span></p>
@@ -77,29 +86,13 @@ export function sticksBlock() {
 </div></section>`;
 }
 
-export function leadForm(defaultCat = "") {
-  const opts = [...categories.map((c) => c.cat), "Другое"];
-  return `<form class="form reveal" id="lead" novalidate>
-  <label for="f-name">Имя</label><input id="f-name" name="name" required autocomplete="name" maxlength="80">
-  <label for="f-phone">Телефон</label><input id="f-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__">
-  <label for="f-cat">Что ремонтируем</label><select id="f-cat" name="category">${opts.map((o) => `<option${o === defaultCat ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>
-  <label for="f-msg">Комментарий</label><textarea id="f-msg" name="comment" rows="3" maxlength="1000" placeholder="Модель, что случилось"></textarea>
-  <input class="hp" id="f-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-  <label class="chk"><input type="checkbox" id="f-ok" name="consent"><span>Даю <a href="/consent/" target="_blank">согласие на обработку персональных данных</a>: имя, телефон и комментарий нужны, чтобы связаться со мной по заявке</span></label>
-  <p class="note legal-note">Порядок обработки описан в <a href="/privacy/" target="_blank">политике обработки персональных данных</a>. Согласие можно отозвать, написав на ${site.email}.</p>
-  <button class="btn" type="submit">Отправить заявку</button>
-  <div class="msg" id="f-res" role="status"></div>
-  <p class="note">Не настраиваю интернет на дому.</p>
-</form>`;
-}
-
-export function requestSection(defaultCat = "", title = "Оставить заявку") {
-  return `<section id="request" class="alt"><div class="wrap two">
-  <div class="reveal"><span class="eyebrow">Заявка</span><h2>${esc(title)}</h2>
-  <p class="lead">Перезвоню в рабочее время (${site.hours}) и подскажу по цене и срокам. Диагностика бесплатная.</p>
-  <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li></ul>
-  <p>Или сразу: <a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a> · <a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a>${site.max ? ` · ${maxLink()}` : ""}</p></div>
-  ${leadForm(defaultCat)}
+export function contactSection(title = "Связаться со мной") {
+  return `<section id="contact" class="alt"><div class="wrap two">
+  <div class="reveal"><span class="eyebrow">Связь</span><h2>${esc(title)}</h2>
+  <p class="lead">Позвоните или напишите в мессенджер в рабочее время (${site.hours}): подскажу по цене и срокам. Диагностика бесплатная.</p>
+  <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li></ul>
+  <p class="note">Не настраиваю интернет на дому.</p></div>
+  <div class="reveal">${contactBtns({ cls: "stack" })}</div>
   </div></section>`;
 }
 
@@ -107,7 +100,7 @@ export function calcSection() {
   return `<section id="calc"><div class="wrap">
   <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">Сколько это примерно стоит</h2><p class="lead reveal">Выберите устройство и услугу — получите ориентир. Точная стоимость — после бесплатной диагностики.</p>
   <div class="calc reveal" id="calc-box"><label for="c-dev">Устройство</label><select id="c-dev"></select><label for="c-srv">Услуга</label><select id="c-srv"></select>
-  <div class="res" id="c-res" aria-live="polite"></div><a id="c-btn" class="btn" href="#request">Оставить заявку</a></div>
+  <div class="res" id="c-res" aria-live="polite"></div><p class="note">Позвоните или напишите, чтобы уточнить цену:</p>${contactBtns({ cls: "stack" })}</div>
   </div></section>`;
 }
 
@@ -158,7 +151,7 @@ ${ld}
 <div class="progress" id="progress"></div>
 <header class="hdr"><div class="wrap bar">
   <a class="logo" href="/" aria-label="FinikFix, на главную"><span class="mark">ff</span><span>Finik<b>Fix</b></span></a>
-  <nav id="nav" aria-label="Основное">${navHtml(path)}<a class="btn sm nav-cta" href="/#request" data-goal="lead_click">Заявка</a></nav>
+  <nav id="nav" aria-label="Основное">${navHtml(path)}<a class="btn sm nav-cta" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a></nav>
   <a class="tel" href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a>
   <button class="burger" id="burger" aria-label="Меню" aria-expanded="false" aria-controls="nav"><i></i><i></i><i></i></button>
 </div></header>
@@ -169,12 +162,12 @@ ${body}
   <div class="fgrid">
     <div><a class="logo" href="/"><span class="mark">ff</span><span>Finik<b>Fix</b></span></a><p>Ремонт консолей, геймпадов, ноутбуков, ПК и смартфонов в Ангарске. «${site.tagline}».</p></div>
     <div><h4>Услуги</h4>${categories.map((c) => `<a href="/${c.slug}/">${esc(c.cat)}</a>`).join("")}</div>
-    <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${maxLink()}${emailLink()}<span>${site.hours}</span><span>${site.place}</span></div>
+    <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener noreferrer" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${maxLink()}${emailLink()}<span>${site.hours}</span><span>${site.place}</span></div>
   </div>
   <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Цены «от» и вилки не являются публичной офертой.</p>
   <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <a href="/terms/">Пользовательское соглашение</a> · <a href="/mailing/">Уведомления и рассылки</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
-<div class="float"><a class="wa" href="${waLink}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp" data-goal="messenger">WA</a><a class="tg" href="${site.telegram}" target="_blank" rel="noopener" aria-label="Написать в Telegram" data-goal="messenger">TG</a>${site.max ? `<a class="mx" href="${esc(site.max)}" target="_blank" rel="noopener" aria-label="Написать в MAX" data-goal="messenger">MAX</a>` : ""}</div>
+<nav class="float" aria-label="Быстрая связь"><a class="fl-call" href="tel:${site.phoneRaw}" aria-label="Позвонить мастеру: ${site.phone}" data-goal="call">${brandIcon("call", 24)}</a>${site.max ? `<a class="fl-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX" data-goal="messenger">${brandIcon("max", 28)}</a>` : ""}<a class="fl-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram" data-goal="messenger">${brandIcon("tg", 28)}</a><a class="fl-wa" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp" data-goal="messenger">${brandIcon("wa", 28)}</a></nav>${brandDefs}
 <script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })), avito: site.avito })}</script>
 ${cookieUi(metrika)}
 <script src="/assets/app.js" defer></script>
@@ -201,8 +194,8 @@ ${heroSlider()}
     <span class="kicker reveal"><span class="mark">ff</span> FinikFix · Ангарск · ${site.tagline}</span>
     <h1 class="reveal">Ремонт <span class="o">консолей</span> и геймпадов в Ангарске</h1>
     <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет. Федеральные сети консоли не берут, я чиню.</p>
-    <div class="acts reveal"><a class="btn" href="#request" data-goal="lead_click">Оставить заявку</a><a class="btn ghost" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a><a class="btn ghost" href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp / Telegram</a></div>
-    <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li><li>Приём по записи</li></ul>
+    <div class="acts reveal">${contactBtns()}</div>
+    <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
     <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>60 отзывов на Авито</span></li></ul>
   </div>
 </div>
@@ -252,7 +245,7 @@ ${calcSection()}
   <div class="reveal">${portfolioBtn()}</div>
 </div></section>
 
-${requestSection()}
+${contactSection()}
 
 <section><div class="wrap"><span class="eyebrow reveal">Контакты</span><h2 class="reveal">Где найти</h2>
   <div class="grid">
@@ -268,12 +261,12 @@ export function categoryPage(c, o) {
   const items = c.items.map((k) => prices[k]);
   const body = `${crumbs(c.cat)}
 <section class="page-hero"><div class="wrap"><span class="badge">${esc(c.cat)}</span><h1>${esc(c.h1)}</h1><p class="hero-p">${esc(c.intro)}</p>
- <div class="acts"><a class="btn" href="#request" data-goal="lead_click">Оставить заявку</a><a class="btn ghost" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a></div></div></section>
+ ${contactBtns()}</div></section>
 ${c.noprices ? "" : `<section><div class="wrap"><span class="eyebrow">Цены</span><h2>Услуги и цены</h2>${priceTable(items)}<p class="note">${c.slug === "remont-smartfonov" ? "Минимальный заказ — 500 ₽. Диагностика бесплатна при ремонте. " : "Точная стоимость — после бесплатной диагностики. "}Цены «от» не являются публичной офертой.</p></div></section>`}
 ${c.more ? `<section><div class="wrap two"><div><span class="eyebrow">Что делаю</span><h2>Что ещё ремонтирую</h2><ul class="ticks">${c.more.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.devices ? `<p class="note">${esc(c.devices)}</p>` : ""}</div><div><span class="eyebrow">Как всё устроено</span><h2>Порядок работы</h2><div class="grid one steps">${c.process.map(([h, p]) => `<div class="card reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("")}</div></div></div></section>` : ""}
 <section class="alt"><div class="wrap two"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div>${noInternet}</div></section>
 ${c.slug === "remont-gamepadov" ? sticksBlock() : ""}
-${requestSection(c.cat)}
+${contactSection()}
 <section><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(c.faq)}<div class="portfolio-row">${portfolioBtn()}</div></div></section>`;
   return layout({ ...o, path: `/${c.slug}/`, title: c.title + ` — ${site.brand}`, desc: c.desc, body, jsonld: [serviceLd(c.h1, c.desc), faqLd(c.faq)] });
 }
@@ -284,7 +277,7 @@ export function narrowPage(n, o) {
 <section><div class="wrap article">${n.sections.map(([h, t]) => `<h2 class="reveal">${esc(h)}</h2><p class="reveal">${esc(t)}</p>`).join("")}
  <p><a href="/${n.back[0]}/">${esc(n.back[1])} →</a></p><div>${portfolioBtn()}</div></div></section>
 ${n.slug === "zamena-stika-gamepada" ? sticksBlock() : ""}
-${requestSection(n.cat)}
+${contactSection()}
 <section class="alt"><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(n.faq)}</div></section>`;
   return layout({ ...o, path: `/${n.slug}/`, title: n.title + ` — ${site.brand}`, desc: n.desc, body, jsonld: [n.slug === "zamena-stika-gamepada" ? stickServiceLd(n.h1, n.desc) : serviceLd(n.h1, n.desc), faqLd(n.faq)] });
 }
@@ -293,7 +286,7 @@ export function pricesPage(o) {
   const body = `${crumbs("Цены")}
 <section class="page-hero"><div class="wrap"><h1>Цены на ремонт в Ангарске</h1><p class="hero-p"><b>Точная стоимость — после бесплатной диагностики.</b> Указаны цены «от», они не являются публичной офертой.</p></div></section>
 <section><div class="wrap">${priceGroups.map((g) => `<div class="pgroup reveal"><h3>${esc(g.name)}</h3>${priceTable(g.items)}${g.note ? `<p class="note">${esc(g.note)}</p>` : ""}</div>`).join("")}</div></section>
-${calcSection()}${requestSection()}`;
+${calcSection()}${contactSection()}`;
   return layout({ ...o, path: "/ceny/", title: pagesOther.prices.title, desc: pagesOther.prices.desc, body });
 }
 
@@ -301,9 +294,9 @@ export function aboutPage(o) {
   const body = `${crumbs("О мастере")}
 <section class="page-hero"><div class="wrap two"><div><span class="badge">О мастере</span><h1>Мастер FinikFix: ремонт на совесть</h1>
 <p class="hero-p">Консолями занимаюсь 10+ лет, смартфонами — 3 года. Ремонтирую в мастерской в Ангарске.</p>
-<ul class="ticks"><li>Микроскоп и замеры напряжений</li><li>Ремонт по схемам</li><li>Договор, расписка или акт</li><li>Гарантия 90 дней</li><li>Чек «Мой налог» по запросу</li><li>Специализация: замена HDMI, датчики Холла вместо изношенных стиков, прошивки PS3/PS4/Switch</li></ul>
+<ul class="ticks"><li>Микроскоп и замеры напряжений</li><li>Ремонт по схемам</li><li>Договор, расписка или акт</li><li>Гарантия 90 дней</li><li>Специализация: замена HDMI, датчики Холла вместо изношенных стиков, прошивки PS3/PS4/Switch</li></ul>
 <div class="acts">${portfolioBtn()}</div></div>${photoBlock(o, "reveal")}</div></section>
-${requestSection()}`;
+${contactSection()}`;
   return layout({ ...o, path: "/o-mastere/", title: pagesOther.about.title, desc: pagesOther.about.desc, body });
 }
 
@@ -317,7 +310,7 @@ export function portfolioPage(o) {
   <noscript><p class="note">Для просмотра галереи включите JavaScript или откройте <a href="${site.avito}" target="_blank" rel="noopener">портфолио на Авито</a>.</p></noscript>
 </div></section>
 <dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
-${requestSection()}`;
+${contactSection()}`;
   return layout({ ...o, path: "/portfolio/", title: "Портфолио работ — FinikFix, Ангарск", desc: "Фото выполненных ремонтов игровых консолей, геймпадов, ноутбуков и ПК в мастерской FinikFix, Ангарск.", body });
 }
 
@@ -325,7 +318,7 @@ export function reviewsPage(o) {
   const body = `${crumbs("Отзывы")}
 <section class="page-hero"><div class="wrap"><h1>Отзывы клиентов</h1><p class="hero-p">Рейтинг <b>4,8</b> и <b>60 отзывов</b> на Авито. Читайте их в профиле, а фото реальных ремонтов смотрите в портфолио.</p>
 <div class="acts">${portfolioBtn()}<a class="btn ghost" href="${site.avitoAd}" target="_blank" rel="noopener">Объявление по смартфонам на Авито</a></div></div></section>
-${requestSection()}`;
+${contactSection()}`;
   return layout({ ...o, path: "/otzyvy/", title: pagesOther.reviews.title, desc: pagesOther.reviews.desc, body });
 }
 
@@ -335,19 +328,18 @@ export function contactsPage(o) {
 <section><div class="wrap two"><div class="grid one">
   <div class="card reveal"><h3>Телефон</h3><p><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a></p></div>
   <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a></p></div>
-  ${site.max ? `<div class="card reveal"><h3>MAX</h3><p>Написать мастеру в MAX.</p><div class="acts">${maxBtn()}</div></div>` : ""}
   <div class="card reveal"><h3>Почта</h3><p>${emailLink()}</p></div>
   <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
   <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
-  ${noInternet}</div>${leadForm()}</div></section>`;
+  ${noInternet}</div><div class="reveal">${contactBtns({ wa: true, cls: "stack" })}</div></div></section>`;
   return layout({ ...o, path: "/kontakty/", title: pagesOther.contacts.title, desc: pagesOther.contacts.desc, body });
 }
 
 export function shopPage(o) {
   const body = `${crumbs("Восстановленная техника")}
 <section class="page-hero"><div class="wrap"><h1>Восстановленная техника</h1><p class="hero-p">Куплено, отремонтировано и проверено. Восстановлено после ремонта, гарантия 90 дней. Наличие уточняйте.</p></div></section>
-<section><div class="wrap"><div class="grid">${shop.map((s) => `<div class="card reveal"><h3>${esc(s.name)}</h3><p class="big">${rub(s.price)}</p><p>Восстановлено после ремонта, гарантия 90 дней</p><a class="btn sm" href="#request">Узнать наличие</a></div>`).join("")}</div></div></section>
-${requestSection("Другое", "Узнать наличие")}`;
+<section><div class="wrap"><div class="grid">${shop.map((s) => `<div class="card reveal"><h3>${esc(s.name)}</h3><p class="big">${rub(s.price)}</p><p>Восстановлено после ремонта, гарантия 90 дней</p><a class="btn sm" href="#contact">Узнать наличие</a></div>`).join("")}</div></div></section>
+${contactSection("Узнать наличие")}`;
   return layout({ ...o, path: "/vosstanovlennaya-tekhnika/", title: pagesOther.shop.title, desc: pagesOther.shop.desc, body });
 }
 
@@ -356,4 +348,3 @@ export function legalPage(o, path, title, html) {
   return layout({ ...o, path, title: `${title} — ${site.brand}`, desc: title, body, noindex: true });
 }
 
-export const thanksHtml = `<p>Заявка принята. Перезвоню в рабочее время (${site.hours}). Если срочно — позвоните: <a href="tel:${site.phoneRaw}">${site.phone}</a>.</p><p><a class="btn" href="/">На главную</a></p>`;

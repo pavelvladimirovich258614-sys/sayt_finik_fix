@@ -3,11 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync, mkdtempSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { createApp, validateLead } from "../server.mjs";
+import { createApp } from "../server.mjs";
 import { categories, narrow } from "../src/data.mjs";
 import { pairTotal } from "../src/pricing.mjs";
-import { signV4, mailConfig, sendMail } from "../src/mail.mjs";
-import { createServer } from "node:http";
 
 const pub = (p) => join(import.meta.dirname, "..", "public", p);
 const allHtml = () => {
@@ -18,7 +16,7 @@ const allHtml = () => {
 };
 
 test("все страницы собраны", () => {
-  for (const s of ["", ...categories.map((c) => c.slug), ...narrow.map((n) => n.slug), "ceny", "o-mastere", "portfolio", "otzyvy", "kontakty", "vosstanovlennaya-tekhnika", "privacy", "consent", "spasibo"])
+  for (const s of ["", ...categories.map((c) => c.slug), ...narrow.map((n) => n.slug), "ceny", "o-mastere", "portfolio", "otzyvy", "kontakty", "vosstanovlennaya-tekhnika", "privacy", "consent"])
     assert.ok(existsSync(pub(join(s, "index.html"))), s);
 });
 
@@ -39,77 +37,22 @@ test("жёсткие правила: гарантия 90 дней, нет 12 м�
   assert.ok(all.includes("не настраиваю интернет на дому") || all.includes("Не настраиваю интернет на дому"));
 });
 
-test("форма: чекбокс согласия и ссылки на ПД на страницах с формой", () => {
-  const h = readFileSync(pub("index.html"), "utf8");
-  assert.match(h, /id="f-ok"/);
-  assert.match(h, /href="\/consent\/"/);
-});
-
-test("validateLead", () => {
-  const ok = { name: "Иван", phone: "+7 (901) 662-45-89", category: "Xbox", comment: "", consent: true };
-  assert.ok(validateLead(ok).lead);
-  assert.ok(validateLead({ ...ok, consent: false }).error);
-  assert.ok(validateLead({ ...ok, phone: "123" }).error);
-  assert.ok(validateLead({ ...ok, name: " " }).error);
-  assert.equal(validateLead({ ...ok, website: "x" }).error, "spam");
-});
-
-test("API и статика: без канала уведомлений заявка не принимается (503)", async () => {
+test("API и статика: /api/lead недоступен (503) для любых методов, данные не сохраняются", async () => {
   const dir = mkdtempSync(join(tmpdir(), "ff-"));
-  const app = createApp({ DATA_DIR: dir, RATE_LIMIT: "100" });
+  const app = createApp({ DATA_DIR: dir });
   await new Promise((r) => app.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${app.address().port}`;
   try {
     assert.equal((await fetch(base + "/")).status, 200);
     assert.equal((await fetch(base + "/remont-xbox/")).status, 200);
+    assert.equal((await fetch(base + "/spasibo/")).status, 404);
     assert.equal((await fetch(base + "/nope")).status, 404);
     assert.equal((await fetch(base + "/..%2f..%2fetc/passwd")).status === 200, false);
-    const post = (b) => fetch(base + "/api/lead", { method: "POST", body: JSON.stringify(b) });
-    const good = { name: "Иван", phone: "+7 (901) 662-45-89", category: "Xbox", consent: true };
-    const r = await post(good);
+    const r = await fetch(base + "/api/lead", { method: "POST", body: JSON.stringify({ name: "Иван", phone: "+7 (901) 662-45-89", consent: true }) });
     assert.equal(r.status, 503);
-    assert.notEqual((await r.json()).ok, true);
-    assert.equal((await post({ name: "Иван", phone: "1", consent: true })).status, 400);
-    assert.equal((await post({ name: "Иван", phone: "+7 (901) 662-45-89" })).status, 400);
+    assert.equal((await fetch(base + "/api/lead")).status, 503);
     assert.equal(existsSync(join(dir, "leads.jsonl")), false);
-    assert.equal((await fetch(base + "/api/lead")).status, 405);
   } finally { app.closeAllConnections?.(); app.close(); }
-});
-
-test("заявки: письмо уходит через Postbox API, при сбое заявка сохраняется и честно помечается", async () => {
-  const seen = [];
-  let fail = true;
-  const mock = createServer((q, r) => { let b = ""; q.on("data", (c) => (b += c)); q.on("end", () => { seen.push({ url: q.url, auth: q.headers.authorization, body: b }); if (fail) { r.writeHead(500); return r.end("boom"); } r.writeHead(200, { "content-type": "application/json" }); r.end('{"MessageId":"m1"}'); }); });
-  await new Promise((r) => mock.listen(0, "127.0.0.1", r));
-  const dir = mkdtempSync(join(tmpdir(), "ff-"));
-  const env = { DATA_DIR: dir, RATE_LIMIT: "100", POSTBOX_ENDPOINT: `http://127.0.0.1:${mock.address().port}`, POSTBOX_KEY_ID: "AKTEST", POSTBOX_SECRET: "secret", MAIL_FROM: "site@example.test", MAIL_TO: "owner@example.test" };
-  const app = createApp(env);
-  await new Promise((r) => app.listen(0, "127.0.0.1", r));
-  const base = `http://127.0.0.1:${app.address().port}`;
-  const post = () => fetch(base + "/api/lead", { method: "POST", body: JSON.stringify({ name: "Иван", phone: "+7 (901) 662-45-89", category: "Xbox", consent: true }) });
-  try {
-    let j = await (await post()).json();
-    assert.equal(j.saved, true); assert.equal(j.notified, false);       // не врём, что письмо доставлено
-    assert.match(readFileSync(join(dir, "leads.jsonl"), "utf8"), /Иван/);
-    assert.equal(readdirSync(join(dir, "outbox")).length, 1);            // поставлено в очередь повтора
-    fail = false;
-    j = await (await post()).json();
-    assert.equal(j.notified, true);
-    assert.equal(seen.at(-1).url, "/v2/email/outbound-emails");
-    assert.match(seen.at(-1).auth, /^AWS4-HMAC-SHA256 Credential=AKTEST\/\d{8}\/ru-central1\/ses\/aws4_request/);
-    assert.match(JSON.parse(seen.at(-1).body).Destination.ToAddresses[0], /owner@example.test/);
-  } finally { app.closeAllConnections?.(); app.close(); mock.closeAllConnections?.(); mock.close(); }
-});
-
-test("SigV4: эталонный вектор AWS (get-vanilla)", () => {
-  const r = signV4({ method: "GET", path: "/", headers: { host: "example.amazonaws.com", "x-amz-date": "20150830T123600Z" }, body: "", region: "us-east-1", service: "service", accessKey: "AKIDEXAMPLE", secretKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", amzDate: "20150830T123600Z" });
-  assert.equal(r.signature, "5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31");
-});
-
-test("mailConfig: без ключей или адресов отправка не настроена", () => {
-  assert.equal(mailConfig({}), null);
-  assert.equal(mailConfig({ MAIL_TO: "a@b.c", MAIL_FROM: "d@e.f" }), null);
-  assert.ok(mailConfig({ MAIL_TO: "a@b.c", MAIL_FROM: "d@e.f", POSTBOX_KEY_ID: "k", POSTBOX_SECRET: "s" }));
 });
 
 test("скидка 15% на два аналога: арифметика", () => {
@@ -135,15 +78,15 @@ test("бесплатная чистка геймпада: только на ст
   assert.deepEqual(withIt, ["remont-gamepadov/index.html", "zamena-stika-gamepada/index.html"]);
 });
 
-test("cookie: страница, баннер без выдуманных категорий, форма с отдельным непредзаполненным согласием", () => {
+test("cookie: страница и баннер без выдуманных категорий, метрика не грузится без согласия", () => {
   const h = readFileSync(pub("index.html"), "utf8");
   assert.ok(existsSync(pub("cookies/index.html")));
   assert.match(h, /href="\/cookies\/"/);
-  assert.doesNotMatch(h, /id="f-ok"[^>]*checked/);
-  assert.doesNotMatch(h, /mc\.yandex\.ru\/metrika\/tag\.js/);          // метрика не грузится без согласия
+  assert.doesNotMatch(h, /mc\.yandex\.ru\/metrika\/tag\.js/);
   const all = allHtml().map((f) => readFileSync(f, "utf8")).join("\n");
-  assert.doesNotMatch(all, /самозанят|применяет НПД/i);
+  assert.doesNotMatch(all, /самозанят|применяет НПД|Мой налог/i);
   assert.doesNotMatch(all, /\bИП\b/);
+  assert.match(readFileSync(pub("cookies/index.html"), "utf8"), /не устанавливает cookie/);
 });
 
 test("внутренние ссылки и якоря не битые", () => {
@@ -159,14 +102,6 @@ test("внутренние ссылки и якоря не битые", () => {
       if (hash && target) assert.ok(ids(target).has(hash.slice(1)), `${f}: ${path}${hash}`);
     }
     for (const m of h.matchAll(/href="#([^"]+)"/g)) assert.ok(ids(h).has(m[1]), `${f}: #${m[1]}`);
-  }
-});
-
-test("юридические страницы доступны из подвала и формы", () => {
-  for (const f of allHtml()) {
-    const h = readFileSync(f, "utf8");
-    assert.match(h, /href="\/privacy\/"/, f);
-    assert.match(h, /href="\/consent\/"/, f);
   }
 });
 
@@ -194,18 +129,31 @@ test("микроскоп упоминается редко, контакты а�
   assert.ok(all.includes("Написать в MAX"));
 });
 
-test("юридические страницы: terms и mailing в подвале, тексты соответствуют Postbox без Telegram", () => {
+test("юридические страницы в подвале открываются; текст соответствует отсутствию формы", () => {
   const home = readFileSync(pub("index.html"), "utf8");
   for (const p of ["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/"]) {
     assert.ok(home.includes(`href="${p}"`), p);
     assert.ok(existsSync(pub(p.slice(1) + "index.html")), p);
   }
-  const priv = readFileSync(pub("privacy/index.html"), "utf8"), cons = readFileSync(pub("consent/index.html"), "utf8");
-  for (const h of [priv, cons]) { assert.match(h, /Postbox/); assert.doesNotMatch(h, /не передаются третьим|не передаёт.{0,20}третьим лицам\./); }
-  assert.doesNotMatch(cons, /Telegram \(/);
-  const mail = readFileSync(pub("mailing/index.html"), "utf8");
-  assert.match(mail, /не означает|не соглашаетесь получать рекламу/);
-  assert.doesNotMatch(home, /id="f-mk"|name="marketing"|name="ads"/);   // рекламной отметки в форме нет, обязательное согласие одно
-  assert.equal((home.match(/type="checkbox"[^>]*name="consent"/g) || []).length, 1);
-  assert.match(readFileSync(pub("cookies/index.html"), "utf8"), /не устанавливает cookie/);
+  const priv = readFileSync(pub("privacy/index.html"), "utf8");
+  assert.match(priv, /нет формы заявки/);
+  assert.match(priv, /Telegram, MAX, WhatsApp/);
+  for (const f of ["privacy", "consent", "terms", "mailing"]) assert.doesNotMatch(readFileSync(pub(f + "/index.html"), "utf8"), /Postbox|Яндекс\.Облако/i);
+  assert.match(readFileSync(pub("mailing/index.html"), "utf8"), /не соглашаетесь получать рекламу/);
+});
+
+test("форм заявки нет, кнопки связи на месте: tel, MAX, Telegram", () => {
+  const tel = "tel:+79016624589", max = "https://web.max.ru/259685091", tg = "https://t.me/+79016624589";
+  for (const f of allHtml()) {
+    const h = readFileSync(f, "utf8"), rel = f.split("/public/")[1];
+    assert.doesNotMatch(h, /<form|id="lead"|Оставить заявку|href="#request"|\/api\/lead|spasibo/, rel);
+    if (/admin/.test(rel)) continue;
+    for (const u of [tel, max, tg]) assert.ok(h.includes(`href="${u}"`), rel + " " + u);
+    assert.match(h, /class="float"[^>]*aria-label="Быстрая связь"/);
+    assert.match(h, /aria-label="Написать в MAX"/);
+    assert.match(h, /aria-label="Написать в Telegram"/);
+  }
+  const home = readFileSync(pub("index.html"), "utf8");
+  assert.match(home, /Позвонить/); assert.match(home, /Написать в MAX/); assert.match(home, /Написать в Telegram/);
+  assert.doesNotMatch(readFileSync(join(import.meta.dirname, "..", "src/client/app.js"), "utf8"), /api\/lead|f-phone|#lead/);
 });

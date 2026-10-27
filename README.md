@@ -35,7 +35,7 @@ cd /opt/finikfix
 
 # 2. Настройки
 sudo -u finikfix cp .env.example .env
-sudo -u finikfix nano .env      # SITE_URL, METRIKA_ID, SITE_INN, TG_BOT_TOKEN, TG_CHAT_ID
+sudo -u finikfix nano .env      # SITE_URL, METRIKA_ID, SITE_INN
 
 # 3. Фото мастера: скопировать в src/assets/img/master.jpg, затем
 sudo -u finikfix npm run build   # SITE_URL и др. берутся из .env
@@ -58,9 +58,9 @@ sudo certbot --nginx -d finikfix.ru -d www.finikfix.ru
 
 Обновление: `git pull && npm run build`.
 
-## Заявки
+## Связь с мастером
 
-Каждая заявка дописывается в `data/leads.jsonl` и, если заданы `TG_BOT_TOKEN` и `TG_CHAT_ID`, уходит мастеру в Telegram. Бота создать у @BotFather, `chat_id` узнать, написав боту и открыв `https://api.telegram.org/bot<TOKEN>/getUpdates`. Отправки на email пока нет ([Уточнить: SMTP или почтовый сервис]). Защита: honeypot-поле и лимит 5 заявок за 10 минут с одного IP.
+Формы заявки на сайте нет (решение владельца). Связь: кнопки «Позвонить» (`tel:`), MAX и Telegram, плавающая панель связи. Ссылки задаются в `src/data.mjs` (`site.phoneRaw`, `site.max`, `site.telegram`). `/api/lead` всегда отвечает 503.
 
 Данные хранятся на вашем сервере в РФ ([Уточнить: расположение сервера]). `data/` закрыт от веб-доступа, потому что сервер отдаёт только `public/`.
 

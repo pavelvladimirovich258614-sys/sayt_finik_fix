@@ -38,7 +38,6 @@ const pages = [
   ["/cookies/", t.legalPage(o, "/cookies/", "Файлы cookie", t.cookiesHtml(o))],
   ["/terms/", t.legalPage(o, "/terms/", "Пользовательское соглашение", t.termsHtml(o))],
   ["/mailing/", t.legalPage(o, "/mailing/", "Правила уведомлений и рекламных рассылок", t.mailingHtml(o))],
-  ["/spasibo/", t.legalPage(o, "/spasibo/", "Спасибо за заявку", t.thanksHtml)],
 ];
 for (const [path, html] of pages) {
   const dir = join(out, path);
@@ -47,11 +46,11 @@ for (const [path, html] of pages) {
 }
 writeFileSync(join(out, "404.html"), t.legalPage(o, "/404.html", "Страница не найдена", `<p>Такой страницы нет. <a href="/">Перейти на главную</a></p>`));
 
-const indexable = pages.filter(([p]) => !["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/", "/spasibo/"].includes(p)).map(([p]) => p);
+const indexable = pages.filter(([p]) => !["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/"].includes(p)).map(([p]) => p);
 if (siteUrl) {
   const base = siteUrl.replace(/\/$/, "");
   writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `<url><loc>${base}${p}</loc></url>`).join("\n")}\n</urlset>\n`);
 }
-writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /spasibo/\nDisallow: /api/\n${siteUrl ? `Sitemap: ${siteUrl.replace(/\/$/, "")}/sitemap.xml\n` : ""}`);
+writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /api/\n${siteUrl ? `Sitemap: ${siteUrl.replace(/\/$/, "")}/sitemap.xml\n` : ""}`);
 
 console.log(`Собрано страниц: ${pages.length + 1}. Фото мастера: ${hasPhoto ? "есть" : "НЕТ (положите src/assets/img/master.webp)"}. SITE_URL: ${siteUrl || "не задан"}. Метрика: ${metrika || "не задана"}.`);
