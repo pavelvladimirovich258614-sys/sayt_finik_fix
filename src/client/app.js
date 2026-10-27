@@ -177,3 +177,66 @@
   if (document.readyState === "complete") idle(preload); else window.addEventListener("load", function () { idle(preload); });
   schedule();
 })();
+
+// Портфолио: блок на главной и галерея /portfolio/ (данные из /api/portfolio)
+(function () {
+  var home = document.getElementById("works-home-grid"), grid = document.getElementById("works-grid");
+  if (!home && !grid) return;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function card(w, onOpen) {
+    var b = el("button", "work-card"); b.type = "button";
+    var ph = w.photos[0], img = document.createElement("img");
+    img.src = ph.src; img.alt = w.title; img.loading = "lazy"; img.decoding = "async"; img.width = ph.width; img.height = ph.height;
+    var pic = el("span", "work-pic"); pic.appendChild(img);
+    if (!w.is_real) pic.appendChild(el("span", "work-tag", "Иллюстрация"));
+    b.appendChild(pic); b.appendChild(el("span", "work-title", w.title));
+    b.addEventListener("click", function () { onOpen(w); });
+    return b;
+  }
+  fetch("/api/portfolio" + (home && !grid ? "?home=1" : ""), { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (data) {
+    var works = data.works || [], cats = data.categories || [];
+    if (home) {
+      if (!works.length) return;
+      document.getElementById("works-home").hidden = false;
+      works.slice(0, 6).forEach(function (w) { home.appendChild(card(w, function () { location.href = "/portfolio/"; })); });
+      return;
+    }
+    // страница /portfolio/
+    var filters = document.getElementById("works-filters"), empty = document.getElementById("works-empty");
+    var lb = document.getElementById("lightbox"), cur = null, idx = 0, opener = null, active = "";
+    if (!works.length) { empty.hidden = false; return; }
+    function render() {
+      grid.textContent = "";
+      works.filter(function (w) { return !active || w.category === active; }).forEach(function (w) { grid.appendChild(card(w, function (x) { open(x); })); });
+    }
+    function chip(label, key, count) {
+      var b = el("button", "chip-f" + (active === key ? " on" : ""), label + (count != null ? " · " + count : "")); b.type = "button"; b.setAttribute("aria-pressed", active === key);
+      b.addEventListener("click", function () { active = key; draw(); });
+      return b;
+    }
+    function draw() {
+      filters.textContent = ""; filters.appendChild(chip("Все", "", works.length));
+      cats.forEach(function (c) { var n = works.filter(function (w) { return w.category === c[0]; }).length; if (n) filters.appendChild(chip(c[1], c[0], n)); });
+      render();
+    }
+    function show() {
+      var p = cur.photos[idx], img = lb.querySelector("img");
+      img.src = p.src; img.alt = cur.title;
+      lb.querySelector(".lb-title").textContent = cur.title;
+      lb.querySelector(".lb-badge").textContent = cur.is_real ? "Реальная работа" : "Иллюстрация";
+      lb.querySelector(".lb-problem").textContent = cur.problem ? "Проблема: " + cur.problem : "";
+      lb.querySelector(".lb-solution").textContent = cur.solution ? "Что сделано: " + cur.solution : "";
+      lb.querySelector(".lb-count").textContent = cur.photos.length > 1 ? (idx + 1) + " из " + cur.photos.length : "";
+      lb.querySelector(".lb-prev").hidden = lb.querySelector(".lb-next").hidden = cur.photos.length < 2;
+    }
+    function open(w) { cur = w; idx = 0; opener = document.activeElement; show(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); }
+    function step(d) { idx = (idx + d + cur.photos.length) % cur.photos.length; show(); }
+    lb.querySelector(".lb-x").addEventListener("click", function () { lb.close(); });
+    lb.querySelector(".lb-prev").addEventListener("click", function () { step(-1); });
+    lb.querySelector(".lb-next").addEventListener("click", function () { step(1); });
+    lb.addEventListener("click", function (e) { if (e.target === lb) lb.close(); });
+    lb.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") step(-1); else if (e.key === "ArrowRight") step(1); });
+    lb.addEventListener("close", function () { if (opener && opener.focus) opener.focus(); });
+    draw();
+  }).catch(function () { var e = document.getElementById("works-empty"); if (e) e.hidden = false; });
+})();

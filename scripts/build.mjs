@@ -29,6 +29,7 @@ const pages = [
   ...narrow.map((n) => [`/${n.slug}/`, t.narrowPage(n, o)]),
   ["/ceny/", t.pricesPage(o)],
   ["/o-mastere/", t.aboutPage(o)],
+  ["/portfolio/", t.portfolioPage(o)],
   ["/otzyvy/", t.reviewsPage(o)],
   ["/kontakty/", t.contactsPage(o)],
   ["/vosstanovlennaya-tekhnika/", t.shopPage(o)],

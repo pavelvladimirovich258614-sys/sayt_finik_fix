@@ -15,7 +15,7 @@ const allHtml = () => {
 };
 
 test("все страницы собраны", () => {
-  for (const s of ["", ...categories.map((c) => c.slug), ...narrow.map((n) => n.slug), "ceny", "o-mastere", "otzyvy", "kontakty", "vosstanovlennaya-tekhnika", "privacy", "consent", "spasibo"])
+  for (const s of ["", ...categories.map((c) => c.slug), ...narrow.map((n) => n.slug), "ceny", "o-mastere", "portfolio", "otzyvy", "kontakty", "vosstanovlennaya-tekhnika", "privacy", "consent", "spasibo"])
     assert.ok(existsSync(pub(join(s, "index.html"))), s);
 });
 

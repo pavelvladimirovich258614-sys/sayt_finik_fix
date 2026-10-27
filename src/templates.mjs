@@ -182,6 +182,12 @@ ${heroSlider()}
   <p class="cat-more reveal">Также: <a href="/vosstanovlennaya-tekhnika/">восстановленная техника</a> · <a href="/skupka/">скупка техники</a></p>
 </div></section>
 
+<section class="alt" id="works-home" hidden><div class="wrap">
+  <span class="eyebrow">Портфолио</span><h2>Наши работы</h2><p class="lead">Реальные ремонты из мастерской. Остальные — в полном портфолио.</p>
+  <div class="works-grid" id="works-home-grid"></div>
+  <p class="cat-more"><a class="btn" href="/portfolio/">Смотреть все работы</a></p>
+</div></section>
+
 <section class="alt"><div class="wrap">
   <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Оставьте заявку — цену назову после бесплатной диагностики.</p>
   <div class="grid five">${problems.map(([h, t, p], i) => `<a class="card tile prob reveal" href="${h}"><span class="ico lg">${icon(problemIcons[i], 34)}</span><h3>${esc(t)}</h3><p>${esc(p).replace(/(\d) (\d)/g, "$1\u00a0$2").replace(/ ₽/g, "\u00a0₽")}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
@@ -259,6 +265,20 @@ export function aboutPage(o) {
 <div class="acts">${portfolioBtn()}</div></div>${photoBlock(o, "reveal")}</div></section>
 ${requestSection()}`;
   return layout({ ...o, path: "/o-mastere/", title: pagesOther.about.title, desc: pagesOther.about.desc, body });
+}
+
+export function portfolioPage(o) {
+  const body = `${crumbs("Портфолио")}
+<section class="page-hero"><div class="wrap"><h1>Портфолио: выполненные ремонты</h1><p class="hero-p">Фото реальных работ из мастерской FinikFix. Выберите категорию, чтобы посмотреть похожие ремонты.</p></div></section>
+<section><div class="wrap">
+  <div class="works-filters" id="works-filters" role="group" aria-label="Категории"></div>
+  <div class="works-grid" id="works-grid" aria-live="polite"></div>
+  <div id="works-empty" class="card" hidden><h3>Работы скоро появятся</h3><p>Пока смотрите фото ремонтов в моём портфолио на Авито.</p><div class="acts">${portfolioBtn()}</div></div>
+  <noscript><p class="note">Для просмотра галереи включите JavaScript или откройте <a href="${site.avito}" target="_blank" rel="noopener">портфолио на Авито</a>.</p></noscript>
+</div></section>
+<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
+${requestSection()}`;
+  return layout({ ...o, path: "/portfolio/", title: "Портфолио работ — FinikFix, Ангарск", desc: "Фото выполненных ремонтов игровых консолей, геймпадов, ноутбуков и ПК в мастерской FinikFix, Ангарск.", body });
 }
 
 export function reviewsPage(o) {
