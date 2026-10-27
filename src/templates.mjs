@@ -1,4 +1,4 @@
-import { site, prices, priceGroups, shop, categories, narrow, pagesOther } from "./data.mjs";
+import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats } from "./data.mjs";
 import { icon } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
@@ -22,11 +22,26 @@ export function photoBlock(o, cls = "") {
     : `<figure class="photo ph ${cls}"><div><b>ff</b><span>Здесь будет фото мастера</span></div></figure>`;
 }
 
-export function heroImage(o) {
-  if (!o.hasPhoto) return `<div class="hc-ph ph"><div><b>ff</b><span>Здесь будет фото мастера</span></div></div>`;
-  const v = `?v=${o.photoVer}`;
-  return `<div class="hc-ph"><img src="/assets/img/${o.photoFile}${v}"${o.hasPhotoSm ? ` srcset="/assets/img/master-640.webp${v} 640w, /assets/img/${o.photoFile}${v} 1024w" sizes="(max-width:1000px) 100vw, 760px"` : ""} alt="Никита, мастер FinikFix, Ангарск" width="1024" height="1024" fetchpriority="high"></div>`;
+const ctlIcon = {
+  prev: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`,
+  next: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`,
+  pause: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`,
+};
+
+// Слайдер первого экрана. Первый кадр грузится сразу (fetchpriority=high), остальные подгружает app.js после загрузки страницы (data-src).
+export function heroSlider() {
+  const n = heroSlides.length;
+  const slides = heroSlides.map((sl, i) => `<figure class="hs-slide${i ? "" : " is-active"}" role="group" aria-roledescription="слайд" aria-label="${i + 1} из ${n}"${i ? ' aria-hidden="true"' : ""} style="--pos:${sl.pos}"><img ${i ? `data-src="/assets/img/slides/${sl.file}"` : `src="/assets/img/slides/${sl.file}" fetchpriority="high"`} alt="${esc(sl.alt)}" width="1600" height="900" decoding="async"></figure>`).join("");
+  const dots = heroSlides.map((_, i) => `<button type="button" class="hs-dot" aria-label="Фото ${i + 1} из ${n}"${i ? "" : ' aria-current="true"'}></button>`).join("");
+  return `<div class="hs-stage" role="region" aria-roledescription="карусель" aria-label="Фото мастера FinikFix">
+  <div class="hs-slides" data-interval="5000">${slides}</div>
+  <div class="hs-ctl" role="group" aria-label="Управление слайдером"><button type="button" class="hs-btn hs-prev" aria-label="Предыдущее фото">${ctlIcon.prev}</button><div class="hs-dots">${dots}</div><button type="button" class="hs-btn hs-next" aria-label="Следующее фото">${ctlIcon.next}</button><button type="button" class="hs-btn hs-pp" aria-label="Остановить смену фото" aria-pressed="false" data-pause="${esc(ctlIcon.pause)}" data-play="${esc(ctlIcon.play)}">${ctlIcon.pause}</button></div>
+</div>`;
 }
+
+const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">MAX</a>` : "");
+const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
 
 export function leadForm(defaultCat = "") {
   const opts = [...categories.map((c) => c.cat), "Другое"];
@@ -106,7 +121,7 @@ ${body}
   <div class="fgrid">
     <div><a class="logo" href="/"><span class="mark">ff</span><span>Finik<b>Fix</b></span></a><p>Ремонт консолей, геймпадов, ноутбуков, ПК и смартфонов в Ангарске. «${site.tagline}».</p></div>
     <div><h4>Услуги</h4>${categories.map((c) => `<a href="/${c.slug}/">${esc(c.cat)}</a>`).join("")}</div>
-    <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a><span>${site.hours}</span><span>${site.place}</span></div>
+    <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${maxLink()}${emailLink()}<span>${site.hours}</span><span>${site.place}</span></div>
   </div>
   <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Исполнитель — самозанятый, применяет НПД. Цены «от» и вилки не являются публичной офертой.</p>
   <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · © ${site.brand}</p>
@@ -122,23 +137,21 @@ const crumbs = (cur) => `<nav class="crumbs wrap" aria-label="Навигация
 const faqLd = (faq) => ({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
 const serviceLd = (name, desc) => ({ "@context": "https://schema.org", "@type": "Service", name, description: desc, provider: { "@type": "LocalBusiness", name: site.brand, telephone: site.phoneRaw }, areaServed: site.city });
 
-const tileIcons = { "remont-playstation": "ps", "remont-xbox": "xbox", "remont-nintendo": "switch", "remont-gamepadov": "gamepad", "remont-noutbukov": "laptop", "remont-smartfonov": "phone", "remont-pk": "pc" };
 const problemIcons = ["stick", "hdmi", "fan", "power", "battery"];
 const stepIcons = ["chat", "search", "tag", "shield"];
-const tools = [["scope", "Микроскоп"], ["meter", "Замеры напряжений"], ["chip", "Работа по схемам"], ["code", "Прошивки PS3/PS4/Switch"]];
+const tools = [["meter", "Замеры напряжений"], ["chip", "Работа по схемам"], ["code", "Прошивки PS3/PS4/Switch"], ["shield", "Договор и гарантия 90 дней"]];
 
 export function homePage(o) {
-  const tiles = [...categories.filter((c) => c.slug !== "skupka").map((c) => [`/${c.slug}/`, c.cat, c.intro.split(". ")[0] + ".", tileIcons[c.slug] || "chip"]), ["/vosstanovlennaya-tekhnika/", "Восстановленная техника", "Куплено, отремонтировано, с гарантией 90 дней.", "recycle"]];
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
   const steps = [["Заявка", "Звоните, пишите в мессенджер или оставьте заявку на сайте."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
-<section class="hero hero-c"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
-${heroImage(o)}
+<section class="hero hero-c hs"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
+${heroSlider()}
 <div class="wrap hc-grid">
   <div class="hc-txt">
     <span class="kicker reveal"><span class="mark">ff</span> FinikFix · Ангарск · ${site.tagline}</span>
     <h1 class="reveal">Ремонт <span class="o">консолей</span> и геймпадов в Ангарске</h1>
-    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет, микроскоп, замеры напряжений. Федеральные сети консоли не берут, я чиню.</p>
+    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет. Федеральные сети консоли не берут, я чиню.</p>
     <div class="acts reveal"><a class="btn" href="#request" data-goal="lead_click">Оставить заявку</a><a class="btn ghost" href="tel:${site.phoneRaw}" data-goal="call">Позвонить</a><a class="btn ghost" href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp / Telegram</a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li><li>Приём по записи</li></ul>
     <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>60 отзывов на Авито</span></li></ul>
@@ -148,8 +161,14 @@ ${heroImage(o)}
 </section>
 
 <section id="services"><div class="wrap">
-  <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтирую</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальное делаю в той же мастерской.</p>
-  <div class="grid">${tiles.map(([h, t, p, ic]) => `<a class="card tile reveal" href="${h}"><span class="ico">${icon(ic, 26)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
+  <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтируем</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальную технику тоже принимаю в мастерской.</p>
+  <div class="cat-grid">${homeCats.map((hc) => {
+    const c = categories.find((x) => x.slug === hc.slug);
+    const text = c.intro.split(". ")[0].replace(/\.?$/, ".");
+    const pic = hc.img ? `<img src="/assets/img/cats/${hc.img}" alt="${esc(hc.title)} в мастерской FinikFix" width="800" height="500" loading="lazy" decoding="async">` : `<span class="cat-ph" aria-hidden="true">${icon(hc.icon, 56)}</span>`;
+    return `<a class="cat-card reveal" href="/${hc.slug}/"><span class="cat-pic">${pic}</span><span class="cat-body"><span class="cat-t"><span class="ico">${icon(hc.icon, 22)}</span><h3>${esc(hc.title)}</h3></span><span class="cat-d">${esc(text)}</span><span class="more">Подробнее →</span></span></a>`;
+  }).join("")}</div>
+  <p class="cat-more reveal">Также: <a href="/vosstanovlennaya-tekhnika/">восстановленная техника</a> · <a href="/skupka/">скупка техники</a></p>
 </div></section>
 
 <section class="alt"><div class="wrap">
@@ -242,7 +261,8 @@ export function contactsPage(o) {
 <section class="page-hero"><div class="wrap"><h1>Контакты</h1></div></section>
 <section><div class="wrap two"><div class="grid one">
   <div class="card reveal"><h3>Телефон</h3><p><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a></p></div>
-  <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a></p></div>
+  <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a>${site.max ? ` · ${maxLink()}` : ""}</p></div>
+  <div class="card reveal"><h3>Почта</h3><p>${emailLink()}</p></div>
   <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
   <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
   ${noInternet}</div>${leadForm()}</div></section>`;

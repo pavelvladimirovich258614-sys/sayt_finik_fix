@@ -102,3 +102,78 @@
     });
   }
 })();
+
+// Слайдер первого экрана
+(function () {
+  var wrap = document.querySelector(".hs-slides");
+  if (!wrap) return;
+  var stage = wrap.parentNode, slides = [].slice.call(wrap.querySelectorAll(".hs-slide"));
+  var dots = [].slice.call(stage.querySelectorAll(".hs-dot"));
+  var pp = stage.querySelector(".hs-pp");
+  var interval = Number(wrap.getAttribute("data-interval")) || 5000;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var cur = 0, timer = null, userPaused = reduce, hover = false, focus = false, hidden = false, offscreen = false, touchUntil = 0;
+
+  function load(i) {
+    var img = slides[i] && slides[i].querySelector("img[data-src]");
+    if (img) { img.src = img.getAttribute("data-src"); img.removeAttribute("data-src"); }
+  }
+  function show(i) {
+    i = (i + slides.length) % slides.length;
+    load(i); load((i + 1) % slides.length);
+    slides[cur].classList.remove("is-active"); slides[cur].setAttribute("aria-hidden", "true"); dots[cur].removeAttribute("aria-current");
+    cur = i;
+    slides[cur].classList.add("is-active"); slides[cur].removeAttribute("aria-hidden"); dots[cur].setAttribute("aria-current", "true");
+  }
+  function active() { return !userPaused && !hover && !focus && !hidden && !offscreen && Date.now() >= touchUntil; }
+  function schedule() {
+    clearTimeout(timer);
+    if (!active()) return;
+    timer = setTimeout(function () { show(cur + 1); schedule(); }, interval);
+  }
+  // Любое взаимодействие: следующая автосмена не раньше чем через interval после последнего действия
+  function interact() { touchUntil = Date.now() + interval; schedule(); }
+  function go(i) { show(i); interact(); }
+
+  stage.querySelector(".hs-prev").addEventListener("click", function () { go(cur - 1); });
+  stage.querySelector(".hs-next").addEventListener("click", function () { go(cur + 1); });
+  dots.forEach(function (d, i) { d.addEventListener("click", function () { go(i); }); });
+  pp.addEventListener("click", function () {
+    userPaused = !userPaused;
+    pp.setAttribute("aria-pressed", userPaused);
+    pp.setAttribute("aria-label", userPaused ? "Запустить смену фото" : "Остановить смену фото");
+    pp.innerHTML = pp.getAttribute(userPaused ? "data-play" : "data-pause");
+    schedule();
+  });
+  if (userPaused) { pp.setAttribute("aria-pressed", "true"); pp.setAttribute("aria-label", "Запустить смену фото"); pp.innerHTML = pp.getAttribute("data-play"); }
+
+  // Наведение мыши и фокус с клавиатуры ставят на паузу
+  stage.addEventListener("mouseenter", function () { hover = true; schedule(); });
+  stage.addEventListener("mouseleave", function () { hover = false; schedule(); });
+  stage.addEventListener("focusin", function (e) { try { focus = e.target.matches(":focus-visible"); } catch (x) { focus = true; } schedule(); }); // пауза только при фокусе с клавиатуры
+  stage.addEventListener("focusout", function () { focus = false; schedule(); });
+  stage.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft") go(cur - 1); else if (e.key === "ArrowRight") go(cur + 1);
+  });
+
+  // Свайп на смартфоне (горизонтальный жест; вертикальная прокрутка не мешает)
+  var sx = 0, sy = 0, swiping = false;
+  stage.addEventListener("touchstart", function (e) { var t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; swiping = true; touchUntil = Date.now() + interval * 2; schedule(); }, { passive: true });
+  stage.addEventListener("touchend", function (e) {
+    if (!swiping) return; swiping = false;
+    var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4) go(dx < 0 ? cur + 1 : cur - 1); else interact();
+  }, { passive: true });
+  stage.addEventListener("touchcancel", function () { swiping = false; }, { passive: true });
+
+  document.addEventListener("visibilitychange", function () { hidden = document.hidden; schedule(); });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (en) { offscreen = !en[0].isIntersecting; schedule(); }, { threshold: 0.2 }).observe(stage);
+  }
+
+  // Второй кадр подгружаем после загрузки страницы; дальше каждый следующий — заранее при показе предыдущего
+  function preload() { load(1); }
+  var idle = window.requestIdleCallback || function (f) { setTimeout(f, 1200); };
+  if (document.readyState === "complete") idle(preload); else window.addEventListener("load", function () { idle(preload); });
+  schedule();
+})();

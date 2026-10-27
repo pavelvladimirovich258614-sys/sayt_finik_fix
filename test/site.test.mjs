@@ -93,3 +93,26 @@ test("юридические страницы доступны из подвал
     assert.match(h, /href="\/consent\/"/, f);
   }
 });
+
+test("слайдер: 6 кадров, первый грузится сразу, файлы на месте", () => {
+  const h = readFileSync(pub("index.html"), "utf8");
+  assert.equal((h.match(/<figure class="hs-slide[" ]/g) || []).length, 6);
+  assert.equal((h.match(/fetchpriority="high"/g) || []).length, 1);
+  assert.equal((h.match(/data-src="\/assets\/img\/slides\//g) || []).length, 5);
+  assert.equal((h.match(/class="hs-dot"/g) || []).length, 6);
+  for (const f of h.match(/\/assets\/img\/(?:slides|cats)\/[\w.-]+\.webp/g) || []) assert.ok(existsSync(pub(f)), f);
+});
+
+test("главная: семь категорий со ссылками на существующие страницы", () => {
+  const h = readFileSync(pub("index.html"), "utf8");
+  const links = [...h.matchAll(/class="cat-card[^"]*" href="\/([\w-]+)\/"/g)].map((m) => m[1]);
+  assert.equal(links.length, 7);
+  for (const s of links) assert.ok(existsSync(pub(join(s, "index.html"))), s);
+});
+
+test("микроскоп упоминается редко, контакты актуальны, MAX не выдуман", () => {
+  const all = allHtml().map((f) => readFileSync(f, "utf8")).join("\n");
+  assert.ok((all.match(/икроскоп/g) || []).length <= 2);
+  assert.ok(all.includes("Fil.nikita98@mail.ru"));
+  assert.ok(!/>MAX</.test(all));
+});
