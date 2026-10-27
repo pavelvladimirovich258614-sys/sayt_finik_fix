@@ -1,5 +1,5 @@
 import { pairTotal } from "./pricing.mjs";
-export { privacyHtml, consentHtml, cookiesHtml } from "./legal.mjs";
+export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
 import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
 import { icon } from "./icons.mjs";
 
@@ -126,7 +126,7 @@ function cookieUi(metrika) {
   const links = `<a href="/cookies/">о файлах cookie</a> и <a href="/privacy/">политика обработки персональных данных</a>`;
   return `<div class="ck" id="ck" hidden role="region" aria-label="Настройки cookie">
   <div class="ck-main"><p><b>Файлы cookie</b></p>
-  <p>${an ? `Для работы сайта используются необходимые технологии. С вашего согласия мы подключаем Яндекс.Метрику, чтобы понимать, какие разделы полезны.` : "Сайт использует только необходимые технологии: запоминает ваш выбор настроек. Аналитических и рекламных cookie нет."} Подробнее: ${links}.</p>
+  <p>${an ? `Для работы сайта используются необходимые технологии. С вашего согласия мы подключаем Яндекс.Метрику, чтобы понимать, какие разделы полезны.` : "Сайт не использует cookie и не сохраняет данные в вашем браузере. Аналитики и рекламных технологий нет, выбирать нечего."} Подробнее: ${links}.</p>
   <div class="ck-acts">${an ? `<button type="button" class="btn sm" id="ck-all">Принять все</button><button type="button" class="btn sm ghost" id="ck-min">Только необходимые</button><button type="button" class="btn sm ghost" id="ck-cfg">Настроить</button>` : `<button type="button" class="btn sm" id="ck-close">Понятно</button>`}</div></div>
   ${an ? `<div class="ck-set" hidden><label class="ck-row"><input type="checkbox" checked disabled><span><b>Необходимые</b>: запоминают ваш выбор настроек. Всегда включены.</span></label>
   <label class="ck-row"><input type="checkbox" id="ck-an"><span><b>Аналитика</b>: Яндекс.Метрика (посещаемость и карты кликов). Включается только по вашему согласию.</span></label>
@@ -172,7 +172,7 @@ ${body}
     <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${maxLink()}${emailLink()}<span>${site.hours}</span><span>${site.place}</span></div>
   </div>
   <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Цены «от» и вилки не являются публичной офертой.</p>
-  <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
+  <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <a href="/terms/">Пользовательское соглашение</a> · <a href="/mailing/">Уведомления и рассылки</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
 <div class="float"><a class="wa" href="${waLink}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp" data-goal="messenger">WA</a><a class="tg" href="${site.telegram}" target="_blank" rel="noopener" aria-label="Написать в Telegram" data-goal="messenger">TG</a>${site.max ? `<a class="mx" href="${esc(site.max)}" target="_blank" rel="noopener" aria-label="Написать в MAX" data-goal="messenger">MAX</a>` : ""}</div>
 <script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })), avito: site.avito })}</script>

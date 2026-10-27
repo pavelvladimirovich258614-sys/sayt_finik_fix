@@ -193,3 +193,19 @@ test("микроскоп упоминается редко, контакты а�
   assert.ok(all.includes("https://web.max.ru/259685091"));
   assert.ok(all.includes("Написать в MAX"));
 });
+
+test("юридические страницы: terms и mailing в подвале, тексты соответствуют Postbox без Telegram", () => {
+  const home = readFileSync(pub("index.html"), "utf8");
+  for (const p of ["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/"]) {
+    assert.ok(home.includes(`href="${p}"`), p);
+    assert.ok(existsSync(pub(p.slice(1) + "index.html")), p);
+  }
+  const priv = readFileSync(pub("privacy/index.html"), "utf8"), cons = readFileSync(pub("consent/index.html"), "utf8");
+  for (const h of [priv, cons]) { assert.match(h, /Postbox/); assert.doesNotMatch(h, /не передаются третьим|не передаёт.{0,20}третьим лицам\./); }
+  assert.doesNotMatch(cons, /Telegram \(/);
+  const mail = readFileSync(pub("mailing/index.html"), "utf8");
+  assert.match(mail, /не означает|не соглашаетесь получать рекламу/);
+  assert.doesNotMatch(home, /id="f-mk"|name="marketing"|name="ads"/);   // рекламной отметки в форме нет, обязательное согласие одно
+  assert.equal((home.match(/type="checkbox"[^>]*name="consent"/g) || []).length, 1);
+  assert.match(readFileSync(pub("cookies/index.html"), "utf8"), /не устанавливает cookie/);
+});
