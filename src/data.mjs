@@ -195,7 +195,7 @@ export const pagesOther = {
 // Слайдер первого экрана: шесть фото из серии заказчика (1600×900). pos — object-position по X, чтобы мастер оставался в кадре на узких экранах.
 export const heroSlides = [
   { file: "slide-01-playstation.webp", pos: "58%", alt: "Мастер FinikFix держит консоли PlayStation 4 и PlayStation 5 в мастерской" },
-  { file: "slide-02-xbox.webp", pos: "60%", alt: "Мастер FinikFix держит консоль Xbox в мастерской" },
+  { file: "slide-02-xbox.webp", pos: "56%", alt: "Мастер FinikFix с консолью Xbox Series X в мастерской на фоне вывески FinikFix" },
   { file: "slide-03-nintendo.webp", pos: "60%", alt: "Мастер FinikFix держит Nintendo Switch в мастерской" },
   { file: "slide-04-pc.webp", pos: "55%", alt: "Мастер FinikFix показывает игровой системный блок в мастерской" },
   { file: "slide-05-laptop.webp", pos: "58%", alt: "Мастер FinikFix держит ноутбук в мастерской" },

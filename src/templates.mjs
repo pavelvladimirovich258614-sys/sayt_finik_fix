@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { pairTotal } from "./pricing.mjs";
 export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
 import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
@@ -32,9 +34,15 @@ const ctlIcon = {
 };
 
 // Слайдер первого экрана. Первый кадр грузится сразу (fetchpriority=high), остальные подгружает app.js после загрузки страницы (data-src).
+// Версия файла в адресе: при замене фото браузер не показывает старое из кэша.
+const slideUrl = (file) => {
+  const f = new URL("./assets/img/slides/" + file, import.meta.url);
+  let v = ""; try { v = "?v=" + createHash("md5").update(readFileSync(f)).digest("hex").slice(0, 8); } catch {}
+  return "/assets/img/slides/" + file + v;
+};
 export function heroSlider() {
   const n = heroSlides.length;
-  const slides = heroSlides.map((sl, i) => `<figure class="hs-slide${i ? "" : " is-active"}" role="group" aria-roledescription="слайд" aria-label="${i + 1} из ${n}"${i ? ' aria-hidden="true"' : ""} style="--pos:${sl.pos}"><img ${i ? `data-src="/assets/img/slides/${sl.file}"` : `src="/assets/img/slides/${sl.file}" fetchpriority="high"`} alt="${esc(sl.alt)}" width="1600" height="900" decoding="async"></figure>`).join("");
+  const slides = heroSlides.map((sl, i) => `<figure class="hs-slide${i ? "" : " is-active"}" role="group" aria-roledescription="слайд" aria-label="${i + 1} из ${n}"${i ? ' aria-hidden="true"' : ""} style="--pos:${sl.pos}"><img ${i ? `data-src="${slideUrl(sl.file)}"` : `src="${slideUrl(sl.file)}" fetchpriority="high"`} alt="${esc(sl.alt)}" width="1600" height="900" decoding="async"></figure>`).join("");
   const dots = heroSlides.map((_, i) => `<button type="button" class="hs-dot" aria-label="Фото ${i + 1} из ${n}"${i ? "" : ' aria-current="true"'}></button>`).join("");
   return `<div class="hs-stage" role="region" aria-roledescription="карусель" aria-label="Фото мастера FinikFix">
   <div class="hs-slides" data-interval="5000">${slides}</div>
