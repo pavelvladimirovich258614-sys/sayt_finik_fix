@@ -23,7 +23,8 @@ export function createPortfolio(env, dataDir) {
   const loginByIp = createLimiter(5, 15 * 60 * 1000), loginByEmail = createLimiter(5, 15 * 60 * 1000);
 
   const isSecure = (req) => !!req.socket.encrypted || (env.TRUST_PROXY === "1" && req.headers["x-forwarded-proto"] === "https");
-  const clientIp = (req) => (env.TRUST_PROXY === "1" && String(req.headers["x-forwarded-for"] || "").split(",")[0].trim()) || req.socket.remoteAddress || "?";
+  // За nginx берём X-Real-IP (его выставляет nginx из $remote_addr). X-Forwarded-For клиент может подделать, на нём лимит входа не строим.
+  const clientIp = (req) => (env.TRUST_PROXY === "1" && String(req.headers["x-real-ip"] || "").trim()) || req.socket.remoteAddress || "?";
   const baseHeaders = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY" };
   const json = (res, code, obj, extra = {}) => { res.writeHead(code, { ...baseHeaders, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra }); res.end(JSON.stringify(obj)); };
   const notFound = (res) => { res.writeHead(404, baseHeaders); res.end(); };
