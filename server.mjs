@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { readFile, appendFile, mkdir, stat } from "node:fs/promises";
 import { join, normalize, extname, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createPortfolio } from "./src/portfolio/api.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(root, "public");
@@ -38,8 +39,10 @@ async function notify(lead, env) {
 
 export function createApp(env = process.env) {
   const dataDir = env.DATA_DIR || join(root, "data");
+  const portfolio = createPortfolio(env, dataDir);
   return createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
+    try { if (await portfolio.handle(req, res, url)) return; } catch (e) { console.error("portfolio error", e.message); if (!res.headersSent) { res.writeHead(500, { "Content-Type": "application/json" }); } return res.end('{"ok":false}'); }
     const sec = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY" };
     if (url.pathname === "/api/lead") {
       const send = (code, obj) => { res.writeHead(code, { ...sec, "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
