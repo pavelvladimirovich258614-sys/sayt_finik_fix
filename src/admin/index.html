@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Админка FinikFix</title><link rel="stylesheet" href="/admin/admin.css"></head>
+<body>
+<main id="app">
+  <section id="login" hidden>
+    <form id="login-form" class="panel" autocomplete="on">
+      <h1>Вход в админку</h1>
+      <label>Email<input type="email" name="email" autocomplete="username" required></label>
+      <label>Пароль<input type="password" name="password" autocomplete="current-password" required></label>
+      <p class="msg" id="login-msg" role="alert"></p>
+      <button class="btn" type="submit">Войти</button>
+    </form>
+  </section>
+  <section id="main" hidden>
+    <header class="top"><b>Портфолио FinikFix</b><span id="who"></span><button class="btn ghost" id="new">+ Новая работа</button><button class="btn ghost" id="logout">Выйти</button></header>
+    <p class="hint">Здесь можно добавлять работы, загружать фото, скрывать и менять порядок. Показываются на сайте только отмеченные «Опубликовано» и с фото.</p>
+    <p class="msg" id="msg" role="status"></p>
+    <ul id="list" class="list"></ul>
+    <dialog id="edit"><form id="edit-form" class="panel">
+      <h2 id="edit-title">Работа</h2>
+      <label>Название<input name="title" maxlength="120" required></label>
+      <label>Категория<select name="category" required></select></label>
+      <label>Что было не так<textarea name="problem" rows="3" maxlength="2000"></textarea></label>
+      <label>Что сделано<textarea name="solution" rows="3" maxlength="2000"></textarea></label>
+      <fieldset><legend>Показ</legend>
+        <label class="chk"><input type="checkbox" name="published"> Опубликовано на сайте</label>
+        <label class="chk"><input type="checkbox" name="is_real" checked> Реальная работа клиента (если снять — подпись «Иллюстрация»)</label>
+        <label class="chk"><input type="checkbox" name="on_home"> Показывать на главной</label>
+        <label class="chk"><input type="checkbox" name="in_slider"> Включить в слайдер</label>
+      </fieldset>
+      <div id="photos-box" hidden>
+        <h3>Фото</h3>
+        <div id="photos" class="photos"></div>
+        <label>Добавить фото (JPEG, PNG, WebP, до 8 МБ каждое)<input type="file" id="files" accept="image/jpeg,image/png,image/webp" multiple></label>
+        <button class="btn ghost" type="button" id="upload">Загрузить выбранные</button>
+      </div>
+      <p class="msg" id="edit-msg" role="alert"></p>
+      <div class="row"><button class="btn" type="submit">Сохранить</button><button class="btn ghost" type="button" id="close">Закрыть</button></div>
+    </form></dialog>
+  </section>
+</main>
+<script src="/admin/admin.js"></script>
+</body></html>
