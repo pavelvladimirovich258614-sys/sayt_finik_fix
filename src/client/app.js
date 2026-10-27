@@ -82,6 +82,37 @@
 
 })();
 
+// Дополнительные HD-версии создаются заранее, до деплоя. Если их нет или они недоступны,
+// всегда показываем исходное изображение. Ключи API никогда не попадают в браузер.
+(function () {
+  function upgrade(img) {
+    if (!img || img.hasAttribute("data-src")) return;
+    var url = img.getAttribute("data-hq-src");
+    if (!url || img.dataset.hqState) return;
+    img.dataset.hqState = "loading";
+    var holder = img.closest(".hs-slide") || img.closest(".cat-pic") || img.parentElement;
+    if (holder) holder.classList.add("is-enhancing");
+    var high = new Image();
+    high.onload = function () {
+      if (img.dataset.hqState !== "loading") return;
+      img.removeAttribute("srcset");
+      img.removeAttribute("sizes");
+      img.src = url;
+      img.dataset.hqState = "ready";
+      if (holder) holder.classList.remove("is-enhancing");
+    };
+    high.onerror = function () {
+      img.dataset.hqState = "fallback";
+      if (holder) holder.classList.remove("is-enhancing");
+      var status = document.getElementById("photo-enhance-status");
+      if (status) status.textContent = "HD-фото временно недоступно. Показан оригинал.";
+    };
+    high.src = url;
+  }
+  window.FFEnhance = upgrade;
+  document.querySelectorAll('img[data-hq-src]:not([data-src])').forEach(upgrade);
+})();
+
 // Слайдер первого экрана
 (function () {
   var wrap = document.querySelector(".hs-slides");
@@ -91,11 +122,13 @@
   var pp = stage.querySelector(".hs-pp");
   var interval = Number(wrap.getAttribute("data-interval")) || 5000;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var cur = 0, timer = null, userPaused = reduce, hover = false, focus = false, hidden = false, offscreen = false, touchUntil = 0;
+  var cur = 0, timer = null, userPaused = reduce, focus = false, hidden = document.hidden, offscreen = false, touchUntil = 0;
 
   function load(i) {
     var img = slides[i] && slides[i].querySelector("img[data-src]");
     if (img) { img.src = img.getAttribute("data-src"); img.removeAttribute("data-src"); }
+    var visible = slides[i] && slides[i].querySelector("img");
+    if (visible && window.FFEnhance) window.FFEnhance(visible);
   }
   function show(i) {
     i = (i + slides.length) % slides.length;
@@ -104,7 +137,7 @@
     cur = i;
     slides[cur].classList.add("is-active"); slides[cur].removeAttribute("aria-hidden"); dots[cur].setAttribute("aria-current", "true");
   }
-  function active() { return !userPaused && !hover && !focus && !hidden && !offscreen && Date.now() >= touchUntil; }
+  function active() { return !userPaused && !focus && !hidden && !offscreen && Date.now() >= touchUntil; }
   function schedule() {
     clearTimeout(timer);
     if (!active()) return;
@@ -126,9 +159,8 @@
   });
   if (userPaused) { pp.setAttribute("aria-pressed", "true"); pp.setAttribute("aria-label", "Запустить смену фото"); pp.innerHTML = pp.getAttribute("data-play"); }
 
-  // Наведение мыши и фокус с клавиатуры ставят на паузу
-  stage.addEventListener("mouseenter", function () { hover = true; schedule(); });
-  stage.addEventListener("mouseleave", function () { hover = false; schedule(); });
+  // Наведение мыши больше не останавливает автоматическую смену фото.
+  // Пауза сохраняется при фокусе с клавиатуры и по кнопке.
   stage.addEventListener("focusin", function (e) { try { focus = e.target.matches(":focus-visible"); } catch (x) { focus = true; } schedule(); }); // пауза только при фокусе с клавиатуры
   stage.addEventListener("focusout", function () { focus = false; schedule(); });
   stage.addEventListener("keydown", function (e) {
@@ -150,6 +182,8 @@
     new IntersectionObserver(function (en) { offscreen = !en[0].isIntersecting; schedule(); }, { threshold: 0.2 }).observe(stage);
   }
 
+  // Первый кадр показан сразу, а HD-версия подменяется после успешной загрузки.
+  load(0);
   // Второй кадр подгружаем после загрузки страницы; дальше каждый следующий — заранее при показе предыдущего
   function preload() { load(1); }
   var idle = window.requestIdleCallback || function (f) { setTimeout(f, 1200); };
@@ -199,6 +233,15 @@
     // страница /portfolio/
     var filters = document.getElementById("works-filters"), empty = document.getElementById("works-empty");
     var lb = document.getElementById("lightbox"), cur = null, idx = 0, opener = null, active = "";
+    var lbTimer = null, lbDelay = 5000;
+    var lbReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function stopAuto() { if (lbTimer) clearInterval(lbTimer); lbTimer = null; }
+    function startAuto() {
+      stopAuto();
+      if (!lbReduced && cur && cur.photos.length > 1 && !document.hidden) {
+        lbTimer = setInterval(function () { step(1, false); }, lbDelay);
+      }
+    }
     if (!works.length) { empty.hidden = false; return; }
     function render() {
       grid.textContent = "";
@@ -216,7 +259,12 @@
     }
     function show() {
       var p = cur.photos[idx], img = lb.querySelector("img");
-      img.src = p.src; img.alt = cur.title;
+      lb.classList.add("is-image-loading");
+      img.onload = function () { lb.classList.remove("is-image-loading"); };
+      img.onerror = function () { lb.classList.remove("is-image-loading"); var s = lb.querySelector(".lb-photo-status"); if (s) s.textContent = "Фото недоступно. Попробуйте другое изображение."; };
+      var note = lb.querySelector(".lb-photo-status"); if (note) note.textContent = "";
+      img.src = p.enhancedSrc || p.src; img.alt = cur.title;
+      if (p.enhancedSrc) { img.onerror = function () { img.onerror = null; img.src = p.src; lb.classList.remove("is-image-loading"); var s = lb.querySelector(".lb-photo-status"); if (s) s.textContent = "HD-версия недоступна, показан оригинал."; }; }
       lb.querySelector(".lb-title").textContent = cur.title;
       lb.querySelector(".lb-badge").textContent = cur.is_real ? "Реальная работа" : "Иллюстрация";
       lb.querySelector(".lb-problem").textContent = cur.problem ? "Проблема: " + cur.problem : "";
@@ -224,14 +272,15 @@
       lb.querySelector(".lb-count").textContent = cur.photos.length > 1 ? (idx + 1) + " из " + cur.photos.length : "";
       lb.querySelector(".lb-prev").hidden = lb.querySelector(".lb-next").hidden = cur.photos.length < 2;
     }
-    function open(w) { cur = w; idx = 0; opener = document.activeElement; show(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); }
-    function step(d) { idx = (idx + d + cur.photos.length) % cur.photos.length; show(); }
+    function open(w) { cur = w; idx = 0; opener = document.activeElement; show(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); startAuto(); }
+    function step(d, reset) { idx = (idx + d + cur.photos.length) % cur.photos.length; show(); if (reset !== false) startAuto(); }
     lb.querySelector(".lb-x").addEventListener("click", function () { lb.close(); });
     lb.querySelector(".lb-prev").addEventListener("click", function () { step(-1); });
     lb.querySelector(".lb-next").addEventListener("click", function () { step(1); });
     lb.addEventListener("click", function (e) { if (e.target === lb) lb.close(); });
     lb.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") step(-1); else if (e.key === "ArrowRight") step(1); });
-    lb.addEventListener("close", function () { if (opener && opener.focus) opener.focus(); });
+    lb.addEventListener("close", function () { stopAuto(); if (opener && opener.focus) opener.focus(); });
+    document.addEventListener("visibilitychange", function () { if (document.hidden || !lb.open) stopAuto(); else startAuto(); });
     draw();
   }).catch(function () { var e = document.getElementById("works-empty"); if (e) e.hidden = false; });
 })();
