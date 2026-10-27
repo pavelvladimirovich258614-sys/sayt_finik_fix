@@ -193,7 +193,7 @@ const tools = [["meter", "Замеры напряжений"], ["chip", "Раб�
 
 export function homePage(o) {
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
-  const steps = [["Заявка", "Звоните, пишите в мессенджер или оставьте заявку на сайте."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
+  const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
 <section class="hero hero-c hs"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
 ${heroSlider()}
@@ -228,7 +228,7 @@ ${heroSlider()}
 </div></section>
 
 <section class="alt"><div class="wrap">
-  <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Оставьте заявку — цену назову после бесплатной диагностики.</p>
+  <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Позвоните или напишите — цену назову после бесплатной диагностики.</p>
   <div class="grid five">${problems.map(([h, t, p], i) => `<a class="card tile prob reveal" href="${h}"><span class="ico lg">${icon(problemIcons[i], 34)}</span><h3>${esc(t)}</h3><p>${esc(p).replace(/(\d) (\d)/g, "$1\u00a0$2").replace(/ ₽/g, "\u00a0₽")}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
 </div></section>
 

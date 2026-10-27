@@ -89,18 +89,29 @@ jobs:
             ssh -T finikfix "bash /opt/finikfix/incoming/remote-deploy.sh deploy $(git rev-parse HEAD)"
           fi
 
-      - name: Проверка снаружи (HTTP по IP)
+      - name: Проверка снаружи (HTTPS)
+        env:
+          SITE: https://finikfix.ru
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5 6; do
-            if curl -fsS -m 10 "http://${FINIKFIX_HOST}/" -o /tmp/index.html; then break; fi; sleep 5
+            if curl -fsS -m 15 "$SITE/" -o /tmp/index.html; then break; fi; sleep 5
           done
-          grep -q "hc-ph" /tmp/index.html || { echo "::error::На главной нет блока Hero C"; exit 1; }
-          curl -fsS -m 10 -o /dev/null "http://${FINIKFIX_HOST}/assets/fonts/unbounded-cyr.woff2"
-          curl -fsS -m 10 -o /dev/null "http://${FINIKFIX_HOST}/assets/img/master.webp"
-          code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "http://${FINIKFIX_HOST}/api/lead")"
-          [ "$code" = "503" ] || { echo "::error::POST /api/lead по HTTP должен быть закрыт (503), получено $code"; exit 1; }
-          echo "OK: сайт отвечает, заявки по HTTP закрыты"
+          grep -q "hc-grid" /tmp/index.html || { echo "::error::На главной нет блока Hero"; exit 1; }
+          grep -q 'href="tel:+79016624589"' /tmp/index.html || { echo "::error::На главной нет ссылки tel:"; exit 1; }
+          grep -q 'slide-02-xbox.webp' /tmp/index.html || { echo "::error::На главной нет слайда Xbox"; exit 1; }
+          ! grep -qiE '<form|Оставить заявку|оставьте заявку' /tmp/index.html || { echo "::error::На главной остались следы формы заявки"; exit 1; }
+          for p in privacy consent cookies terms mailing portfolio ceny kontakty; do
+            curl -fsS -m 15 -o /dev/null "$SITE/$p/" || { echo "::error::Страница /$p/ недоступна"; exit 1; }
+          done
+          curl -fsS -m 15 -o /dev/null "$SITE/assets/fonts/unbounded-cyr.woff2"
+          curl -fsS -m 15 -o /dev/null "$SITE/assets/img/master.webp"
+          # HTTP должен перенаправлять на HTTPS
+          loc="$(curl -s -m 15 -o /dev/null -w '%{http_code} %{redirect_url}' "http://finikfix.ru/")"
+          case "$loc" in 301*https://finikfix.ru/*|308*https://finikfix.ru/*) ;; *) echo "::error::HTTP не перенаправляет на HTTPS: $loc"; exit 1;; esac
+          code="$(curl -s -m 15 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$SITE/api/lead")"
+          [ "$code" = "503" ] || { echo "::error::POST /api/lead должен отвечать 503, получено $code"; exit 1; }
+          echo "OK: сайт отвечает по HTTPS, редирект с HTTP работает, /api/lead закрыт (503)"
 
       - name: Удаление ключа
         if: always()
