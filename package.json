@@ -6,6 +6,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "enhance:photos": "node scripts/enhance-photos.mjs",
     "start": "node server.mjs",
     "dev": "node scripts/build.mjs && node server.mjs",
     "test": "node scripts/build.mjs && node --test \"test/*.test.mjs\""
