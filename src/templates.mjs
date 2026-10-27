@@ -1,4 +1,6 @@
-import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech } from "./data.mjs";
+import { pairTotal } from "./pricing.mjs";
+export { privacyHtml, consentHtml, cookiesHtml } from "./legal.mjs";
+import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
 import { icon } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
@@ -41,16 +43,37 @@ export function heroSlider() {
 }
 
 const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">MAX</a>` : "");
+const maxBtn = () => (site.max ? `<a class="btn ghost" href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">Написать в MAX</a>` : "");
 const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
 
-// Сравнение стиков. Единица цены (за стик или за услугу) не подтверждена и не указывается; цены только «от».
+// Сравнение стиков и акция. Цены указаны за ОДИН аналог (подтверждено заказчиком); цены только «от».
+const fmtRub = (n) => rub(n);
 export function sticksBlock() {
+  const opts = stickTypes.map((t) => [t.name, t.price]);
+  const defA = 1, defB = 1; // по умолчанию два JCD: пример заказчика 1 500 + 1 500 = 3 000, скидка 450, итого 2 550
+  const r = pairTotal(opts[defA][1], opts[defB][1]);
+  const options = (sel) => opts.map(([n, pr], i) => `<option value="${pr}"${i === sel ? " selected" : ""}>${esc(n)} — от ${fmtRub(pr)}</option>`).join("");
   return `<section class="alt" id="sticks"><div class="wrap">
   <span class="eyebrow reveal">Замена стиков</span><h2 class="reveal">Какие стики я ставлю</h2>
-  <p class="lead reveal">Подберу вариант под ваш геймпад и бюджет. Ниже — три технологии и варианты с ценами.</p>
+  <p class="lead reveal">Подберу вариант под ваш геймпад и бюджет. Цена указана <b>${stickUnit}</b>.</p>
   <div class="stick-tech">${Object.values(stickTech).map((t) => `<div class="card reveal"><span class="ico">${icon("stick", 26)}</span><span class="tag-s">${esc(t.tag)}</span><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`).join("")}</div>
-  <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">от ${rub(t.price)}</p></div>`).join("")}</div>
-  <p class="note reveal">Цены «от», не являются публичной офертой. Точная стоимость — после бесплатной диагностики. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
+  <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">от ${rub(t.price)}</p><span class="unit">${stickUnit}</span></div>`).join("")}</div>
+  <div class="promo reveal" id="promo" data-discount="${promos.pairDiscount.percent}">
+    <div class="promo-badge" aria-hidden="true">−${promos.pairDiscount.percent}%</div>
+    <div class="promo-body">
+      <span class="eyebrow">Акция</span>
+      <h3>Замена двух аналогов — скидка ${promos.pairDiscount.percent}%</h3>
+      <p>${esc(promos.pairDiscount.text)} Формула: (цена первого + цена второго) × 0,85.</p>
+      <div class="promo-calc">
+        <label>Первый аналог<select id="pr-a">${options(defA)}</select></label>
+        <label>Второй аналог<select id="pr-b">${options(defB)}</select></label>
+        <dl class="promo-res" aria-live="polite"><div><dt>Сумма</dt><dd id="pr-sum">от ${fmtRub(r.sum)}</dd></div><div><dt>Скидка ${promos.pairDiscount.percent}%</dt><dd id="pr-disc">−${fmtRub(r.discount)}</dd></div><div class="tot"><dt>Итого</dt><dd id="pr-total">от ${fmtRub(r.total)}</dd></div></dl>
+      </div>
+      <p class="note">Цены «от», поэтому итог тоже «от»: точную стоимость называю после бесплатной диагностики.</p>
+    </div>
+  </div>
+  <p class="free-clean reveal">${icon("shield", 22)}<span><b>Бесплатная внутренняя чистка.</b> ${esc(promos.freeCleaning.text)}</span></p>
+  <p class="note reveal">Цены «от», не являются публичной офертой. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
 </div></section>`;
 }
 
@@ -62,7 +85,8 @@ export function leadForm(defaultCat = "") {
   <label for="f-cat">Что ремонтируем</label><select id="f-cat" name="category">${opts.map((o) => `<option${o === defaultCat ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>
   <label for="f-msg">Комментарий</label><textarea id="f-msg" name="comment" rows="3" maxlength="1000" placeholder="Модель, что случилось"></textarea>
   <input class="hp" id="f-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-  <label class="chk"><input type="checkbox" id="f-ok" name="consent"><span>Согласен(на) на <a href="/consent/" target="_blank">обработку персональных данных</a> и с <a href="/privacy/" target="_blank">политикой конфиденциальности</a></span></label>
+  <label class="chk"><input type="checkbox" id="f-ok" name="consent"><span>Даю <a href="/consent/" target="_blank">согласие на обработку персональных данных</a>: имя, телефон и комментарий нужны, чтобы связаться со мной по заявке</span></label>
+  <p class="note legal-note">Порядок обработки описан в <a href="/privacy/" target="_blank">политике обработки персональных данных</a>. Согласие можно отозвать, написав на ${site.email}.</p>
   <button class="btn" type="submit">Отправить заявку</button>
   <div class="msg" id="f-res" role="status"></div>
   <p class="note">Не настраиваю интернет на дому.</p>
@@ -74,7 +98,7 @@ export function requestSection(defaultCat = "", title = "Оставить зая
   <div class="reveal"><span class="eyebrow">Заявка</span><h2>${esc(title)}</h2>
   <p class="lead">Перезвоню в рабочее время (${site.hours}) и подскажу по цене и срокам. Диагностика бесплатная.</p>
   <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li><li>Чек «Мой налог» по запросу</li></ul>
-  <p>Или сразу: <a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a> · <a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a></p></div>
+  <p>Или сразу: <a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a> · <a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a>${site.max ? ` · ${maxLink()}` : ""}</p></div>
   ${leadForm(defaultCat)}
   </div></section>`;
 }
@@ -96,6 +120,20 @@ function navHtml(path) {
     navMain.map(([h, t]) => `<a href="${h}"${h === path ? ' aria-current="page"' : ""}>${t}</a>`).join("");
 }
 
+// Окно выбора cookie. Категория «Аналитика» существует только если подключена Яндекс.Метрика (METRIKA_ID); иначе есть лишь информационное окно.
+function cookieUi(metrika) {
+  const an = !!metrika;
+  const links = `<a href="/cookies/">о файлах cookie</a> и <a href="/privacy/">политика обработки персональных данных</a>`;
+  return `<div class="ck" id="ck" hidden role="region" aria-label="Настройки cookie">
+  <div class="ck-main"><p><b>Файлы cookie</b></p>
+  <p>${an ? `Для работы сайта используются необходимые технологии. С вашего согласия мы подключаем Яндекс.Метрику, чтобы понимать, какие разделы полезны.` : "Сайт использует только необходимые технологии: запоминает ваш выбор настроек. Аналитических и рекламных cookie нет."} Подробнее: ${links}.</p>
+  <div class="ck-acts">${an ? `<button type="button" class="btn sm" id="ck-all">Принять все</button><button type="button" class="btn sm ghost" id="ck-min">Только необходимые</button><button type="button" class="btn sm ghost" id="ck-cfg">Настроить</button>` : `<button type="button" class="btn sm" id="ck-close">Понятно</button>`}</div></div>
+  ${an ? `<div class="ck-set" hidden><label class="ck-row"><input type="checkbox" checked disabled><span><b>Необходимые</b>: запоминают ваш выбор настроек. Всегда включены.</span></label>
+  <label class="ck-row"><input type="checkbox" id="ck-an"><span><b>Аналитика</b>: Яндекс.Метрика (посещаемость и карты кликов). Включается только по вашему согласию.</span></label>
+  <div class="ck-acts"><button type="button" class="btn sm" id="ck-save">Сохранить выбор</button></div></div>` : ""}
+</div>`;
+}
+
 export function layout({ path, title, desc, body, jsonld = [], hasPhoto, metrika, siteUrl, noindex = false }) {
   const url = siteUrl ? siteUrl.replace(/\/$/, "") + path : "";
   const local = {
@@ -104,7 +142,6 @@ export function layout({ path, title, desc, body, jsonld = [], hasPhoto, metrika
     openingHours: "Mo-Fr 10:00-20:00", sameAs: [site.vk, site.channel], ...(url ? { url: siteUrl } : {}),
   };
   const ld = [local, ...jsonld].map((o) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join("\n");
-  const ym = metrika ? `<script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(${Number(metrika)},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true});window.__ym=${Number(metrika)};</script>` : "";
   return `<!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -116,7 +153,7 @@ ${noindex ? '<meta name="robots" content="noindex,follow">' : ""}${url ? `<link 
 <link rel="preload" href="/assets/fonts/onest-cyr.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
 ${ld}
-</head><body>
+</head><body${metrika ? ` data-ym="${Number(metrika)}"` : ""}>
 <a class="skip" href="#main">К содержимому</a>
 <div class="progress" id="progress"></div>
 <header class="hdr"><div class="wrap bar">
@@ -134,18 +171,19 @@ ${body}
     <div><h4>Услуги</h4>${categories.map((c) => `<a href="/${c.slug}/">${esc(c.cat)}</a>`).join("")}</div>
     <div><h4>Связь</h4><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a><a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a><a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a><a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${maxLink()}${emailLink()}<span>${site.hours}</span><span>${site.place}</span></div>
   </div>
-  <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Исполнитель — самозанятый, применяет НПД. Цены «от» и вилки не являются публичной офертой.</p>
-  <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · © ${site.brand}</p>
+  <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Цены «от» и вилки не являются публичной офертой.</p>
+  <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
-<div class="float"><a class="wa" href="${waLink}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp" data-goal="messenger">WA</a><a class="tg" href="${site.telegram}" target="_blank" rel="noopener" aria-label="Написать в Telegram" data-goal="messenger">TG</a></div>
+<div class="float"><a class="wa" href="${waLink}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp" data-goal="messenger">WA</a><a class="tg" href="${site.telegram}" target="_blank" rel="noopener" aria-label="Написать в Telegram" data-goal="messenger">TG</a>${site.max ? `<a class="mx" href="${esc(site.max)}" target="_blank" rel="noopener" aria-label="Написать в MAX" data-goal="messenger">MAX</a>` : ""}</div>
 <script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })), avito: site.avito })}</script>
-${ym}
+${cookieUi(metrika)}
 <script src="/assets/app.js" defer></script>
 </body></html>`;
 }
 
 const crumbs = (cur) => `<nav class="crumbs wrap" aria-label="Навигация"><a href="/">Главная</a> / <span>${esc(cur)}</span></nav>`;
 const faqLd = (faq) => ({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
+const stickServiceLd = (name, desc) => ({ ...serviceLd(name, desc), offers: { "@type": "AggregateOffer", priceCurrency: "RUB", lowPrice: Math.min(...stickTypes.map((t) => t.price)), highPrice: Math.max(...stickTypes.map((t) => t.price)), offerCount: stickTypes.length, description: `Цена за один аналог (стик), от. ${promos.pairDiscount.text}` } });
 const serviceLd = (name, desc) => ({ "@context": "https://schema.org", "@type": "Service", name, description: desc, provider: { "@type": "LocalBusiness", name: site.brand, telephone: site.phoneRaw }, areaServed: site.city });
 
 const problemIcons = ["stick", "hdmi", "fan", "power", "battery"];
@@ -193,6 +231,8 @@ ${heroSlider()}
   <div class="grid five">${problems.map(([h, t, p], i) => `<a class="card tile prob reveal" href="${h}"><span class="ico lg">${icon(problemIcons[i], 34)}</span><h3>${esc(t)}</h3><p>${esc(p).replace(/(\d) (\d)/g, "$1\u00a0$2").replace(/ ₽/g, "\u00a0₽")}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
 </div></section>
 
+<section class="promo-strip-sec"><div class="wrap"><a class="promo-strip reveal" href="/zamena-stika-gamepada/#promo"><span class="promo-badge" aria-hidden="true">−15%</span><span><b>Замена двух аналогов — скидка 15%.</b> Посчитайте итог для своих аналогов</span><span class="more">Рассчитать →</span></a></div></section>
+
 <section><div class="wrap">
   <span class="eyebrow reveal">Процесс</span><h2 class="reveal">Как я работаю</h2><p class="lead reveal">Без сюрпризов в цене.</p>
   <div class="grid steps">${steps.map(([t, p], i) => `<div class="card reveal"><span class="sico">${icon(stepIcons[i], 30)}</span><h3>${t}</h3><p>${p}</p></div>`).join("")}</div>
@@ -217,7 +257,7 @@ ${requestSection()}
 <section><div class="wrap"><span class="eyebrow reveal">Контакты</span><h2 class="reveal">Где найти</h2>
   <div class="grid">
    <div class="card reveal"><h3>Телефон</h3><p><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a></p></div>
-   <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a></p></div>
+   <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a>${site.max ? ` · ${maxLink()}` : ""}</p></div>
    <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
    <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
   </div></div></section>`;
@@ -246,7 +286,7 @@ export function narrowPage(n, o) {
 ${n.slug === "zamena-stika-gamepada" ? sticksBlock() : ""}
 ${requestSection(n.cat)}
 <section class="alt"><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(n.faq)}</div></section>`;
-  return layout({ ...o, path: `/${n.slug}/`, title: n.title + ` — ${site.brand}`, desc: n.desc, body, jsonld: [serviceLd(n.h1, n.desc), faqLd(n.faq)] });
+  return layout({ ...o, path: `/${n.slug}/`, title: n.title + ` — ${site.brand}`, desc: n.desc, body, jsonld: [n.slug === "zamena-stika-gamepada" ? stickServiceLd(n.h1, n.desc) : serviceLd(n.h1, n.desc), faqLd(n.faq)] });
 }
 
 export function pricesPage(o) {
@@ -294,7 +334,8 @@ export function contactsPage(o) {
 <section class="page-hero"><div class="wrap"><h1>Контакты</h1></div></section>
 <section><div class="wrap two"><div class="grid one">
   <div class="card reveal"><h3>Телефон</h3><p><a href="tel:${site.phoneRaw}" data-goal="call">${site.phone}</a></p></div>
-  <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a>${site.max ? ` · ${maxLink()}` : ""}</p></div>
+  <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a></p></div>
+  ${site.max ? `<div class="card reveal"><h3>MAX</h3><p>Написать мастеру в MAX.</p><div class="acts">${maxBtn()}</div></div>` : ""}
   <div class="card reveal"><h3>Почта</h3><p>${emailLink()}</p></div>
   <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
   <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
@@ -315,15 +356,4 @@ export function legalPage(o, path, title, html) {
   return layout({ ...o, path, title: `${title} — ${site.brand}`, desc: title, body, noindex: true });
 }
 
-export const privacyHtml = `<p>Оператор персональных данных — ${site.owner}, самозанятый, применяет НПД (далее — Оператор). Контакт: <a href="tel:${site.phoneRaw}">${site.phone}</a>.</p>
-<h2>1. Какие данные собираем</h2><p>Имя и номер телефона, а также текст комментария, которые вы указываете в форме заявки. Обезличенные данные о посещении сайта могут собираться сервисом Яндекс.Метрика.</p>
-<h2>2. Зачем</h2><p>Только чтобы связаться с вами по заявке на ремонт или скупку техники.</p>
-<h2>3. Хранение и передача</h2><p>Данные хранятся только для связи по заявке и не передаются третьим лицам, кроме случаев, предусмотренных законом. Заявка пересылается Оператору в мессенджер Telegram. Хранение осуществляется на сервере в Российской Федерации.</p>
-<h2>4. Ваши права</h2><p>Вы можете запросить уточнение или удаление данных, а также отозвать согласие, связавшись с Оператором по контактам на сайте. Обработка осуществляется в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».</p>
-<h2>5. Cookies</h2><p>Сайт может использовать cookies и сервисы статистики для анализа посещаемости. Вы можете отключить их в настройках браузера.</p>`;
-export const consentHtml = `<p>Отправляя форму на сайте, я свободно, своей волей и в своём интересе даю Оператору (${site.owner}, самозанятый) согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».</p>
-<h2>Перечень данных</h2><p>Имя, номер телефона, содержание комментария.</p>
-<h2>Цель</h2><p>Связь со мной по заявке на ремонт или скупку техники.</p>
-<h2>Действия</h2><p>Сбор, запись, хранение, использование, удаление. Передача третьим лицам не осуществляется.</p>
-<h2>Срок и отзыв</h2><p>Согласие действует до достижения цели обработки или до его отзыва. Отозвать согласие можно, сообщив Оператору по контактам на сайте. Подробнее — в <a href="/privacy/">Политике конфиденциальности</a>.</p>`;
 export const thanksHtml = `<p>Заявка принята. Перезвоню в рабочее время (${site.hours}). Если срочно — позвоните: <a href="tel:${site.phoneRaw}">${site.phone}</a>.</p><p><a class="btn" href="/">На главную</a></p>`;

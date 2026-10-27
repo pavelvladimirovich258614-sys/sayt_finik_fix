@@ -76,6 +76,17 @@
     });
   }
 
+  // Акция: два аналога, скидка 15%. Итого = (цена первого + цена второго) × 0,85 (та же формула в src/pricing.mjs)
+  var pa = $("#pr-a"), pb = $("#pr-b"), promo = $("#promo");
+  if (pa && pb && promo) {
+    var disc = Number(promo.getAttribute("data-discount")) / 100;
+    var pupd = function () {
+      var sum = Number(pa.value) + Number(pb.value), total = Math.round(sum * (1 - disc));
+      $("#pr-sum").textContent = "от " + fmt(sum); $("#pr-disc").textContent = "−" + fmt(sum - total); $("#pr-total").textContent = "от " + fmt(total);
+    };
+    pa.addEventListener("change", pupd); pb.addEventListener("change", pupd);
+  }
+
   // Форма
   var f = $("#lead");
   if (f) {
@@ -255,4 +266,52 @@
     lb.addEventListener("close", function () { if (opener && opener.focus) opener.focus(); });
     draw();
   }).catch(function () { var e = document.getElementById("works-empty"); if (e) e.hidden = false; });
+})();
+
+
+// Согласие на cookie. Яндекс.Метрика (если подключена, data-ym на body) загружается только после согласия на аналитику.
+(function () {
+  var KEY = "ff_consent", ymId = Number(document.body.getAttribute("data-ym")) || 0;
+  var box = document.getElementById("ck"); if (!box) return;
+  var set = box.querySelector(".ck-set"), main = box.querySelector(".ck-main"), an = document.getElementById("ck-an");
+  var mem = null;
+  function read() { try { var v = JSON.parse(localStorage.getItem(KEY)); if (v && v.v === 1) return v; } catch (e) {} return mem; }
+  function save(analytics) { var v = { v: 1, analytics: !!analytics, date: new Date().toISOString().slice(0, 10) }; mem = v; try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} return v; }
+  function loadYm() {
+    if (!ymId || window.__ym) return;
+    (function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); }; m[i].l = 1 * new Date(); k = e.createElement(t); a = e.getElementsByTagName(t)[0]; k.async = 1; k.src = r; a.parentNode.insertBefore(k, a); })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    window.ym(ymId, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true });
+    window.__ym = ymId;
+  }
+  function dropYmCookies() {
+    document.cookie.split(";").forEach(function (c) {
+      var n = c.split("=")[0].trim();
+      if (/^(_ym|yabs-|_ga)/.test(n) || n === "yandexuid" || n === "ymex") { ["", "." + location.hostname].forEach(function (d) { document.cookie = n + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/" + (d ? "; domain=" + d : ""); }); }
+    });
+  }
+  function apply(analytics, prev) {
+    save(analytics);
+    box.hidden = true;
+    if (analytics) loadYm();
+    else if (prev && prev.analytics) { dropYmCookies(); location.reload(); }
+  }
+  function open(settings) {
+    var cur = read();
+    if (an) an.checked = !!(cur && cur.analytics);
+    if (set) { set.hidden = !settings; main.hidden = !!settings; }
+    box.hidden = false;
+    var f = box.querySelector("button"); if (f) f.focus();
+  }
+  function bind(id, fn) { var b = document.getElementById(id); if (b) b.addEventListener("click", fn); }
+  bind("ck-all", function () { apply(true, read()); });
+  bind("ck-min", function () { apply(false, read()); });
+  bind("ck-cfg", function () { open(true); });
+  bind("ck-save", function () { apply(!!(an && an.checked), read()); });
+  bind("ck-close", function () { box.hidden = true; });
+  bind("ck-open", function () { open(!!set); });
+  function mark() { document.body.classList.toggle("ck-on", !box.hidden); }
+  new MutationObserver(mark).observe(box, { attributes: true, attributeFilter: ["hidden"] }); mark();
+  var cur = read();
+  if (cur && cur.analytics) loadYm();
+  else if (ymId && !cur) open(false);
 })();

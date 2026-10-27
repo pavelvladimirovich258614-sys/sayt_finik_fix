@@ -6,6 +6,7 @@ import { readFile, appendFile, mkdir, stat } from "node:fs/promises";
 import { join, normalize, extname, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createPortfolio } from "./src/portfolio/api.mjs";
+import { createLeadService } from "./src/leads.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(root, "public");
@@ -29,18 +30,12 @@ function limited(ip, max = 5, windowMs = 10 * 60 * 1000) {
   return arr.length > max;
 }
 
-async function notify(lead, env) {
-  const text = `Заявка с сайта FinikFix\nИмя: ${lead.name}\nТелефон: ${lead.phone}\nКатегория: ${lead.category}\nКомментарий: ${lead.comment || "—"}\nСтраница: ${lead.page || "—"}`;
-  if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
-    const r = await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }) });
-    if (!r.ok) throw new Error("telegram " + r.status);
-  }
-}
 
 export function createApp(env = process.env) {
   const dataDir = env.DATA_DIR || join(root, "data");
   const portfolio = createPortfolio(env, dataDir);
-  return createServer(async (req, res) => {
+  const leads = createLeadService(env, dataDir);
+  const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
     try { if (await portfolio.handle(req, res, url)) return; } catch (e) { console.error("portfolio error", e.message); if (!res.headersSent) { res.writeHead(500, { "Content-Type": "application/json" }); } return res.end('{"ok":false}'); }
     const sec = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY" };
@@ -57,11 +52,13 @@ export function createApp(env = process.env) {
       if (v.error === "spam") return send(200, { ok: true }); // ботам делаем вид, что всё принято
       if (v.error) return send(400, { ok: false, error: v.error });
       try {
-        await mkdir(dataDir, { recursive: true });
-        await appendFile(join(dataDir, "leads.jsonl"), JSON.stringify({ ...v.lead, at: new Date().toISOString() }) + "\n");
-      } catch (e) { console.error("save lead failed", e.message); return send(500, { ok: false }); }
-      try { await notify(v.lead, env); } catch (e) { console.error("notify failed", e.message); }
-      return send(200, { ok: true });
+        const r = await leads.submit(v.lead);
+        // saved: заявка сохранена на сервере; notified: мастеру ушло уведомление (если нет — оно в очереди на повтор)
+        return send(200, { ok: true, saved: true, notified: r.notified });
+      } catch (e) {
+        if (e.message === "no_channel") return send(503, { ok: false, error: "Приём заявок временно недоступен. Позвоните или напишите в мессенджер." });
+        console.error("save lead failed", e.message); return send(500, { ok: false });
+      }
     }
     if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405, sec); return res.end(); }
     let p; try { p = decodeURIComponent(url.pathname); } catch { res.writeHead(400, sec); return res.end(); }
@@ -78,6 +75,8 @@ export function createApp(env = process.env) {
       res.writeHead(404, { ...sec, "Content-Type": "text/html; charset=utf-8" }); res.end(nf);
     }
   });
+  server.on("listening", () => leads.startRetryLoop());
+  return server;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

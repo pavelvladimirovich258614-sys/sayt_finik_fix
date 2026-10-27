@@ -33,8 +33,9 @@ const pages = [
   ["/otzyvy/", t.reviewsPage(o)],
   ["/kontakty/", t.contactsPage(o)],
   ["/vosstanovlennaya-tekhnika/", t.shopPage(o)],
-  ["/privacy/", t.legalPage(o, "/privacy/", "Политика конфиденциальности", t.privacyHtml)],
-  ["/consent/", t.legalPage(o, "/consent/", "Согласие на обработку персональных данных", t.consentHtml)],
+  ["/privacy/", t.legalPage(o, "/privacy/", "Политика обработки персональных данных", t.privacyHtml(o))],
+  ["/consent/", t.legalPage(o, "/consent/", "Согласие на обработку персональных данных", t.consentHtml(o))],
+  ["/cookies/", t.legalPage(o, "/cookies/", "Файлы cookie", t.cookiesHtml(o))],
   ["/spasibo/", t.legalPage(o, "/spasibo/", "Спасибо за заявку", t.thanksHtml)],
 ];
 for (const [path, html] of pages) {
@@ -44,7 +45,7 @@ for (const [path, html] of pages) {
 }
 writeFileSync(join(out, "404.html"), t.legalPage(o, "/404.html", "Страница не найдена", `<p>Такой страницы нет. <a href="/">Перейти на главную</a></p>`));
 
-const indexable = pages.filter(([p]) => !["/privacy/", "/consent/", "/spasibo/"].includes(p)).map(([p]) => p);
+const indexable = pages.filter(([p]) => !["/privacy/", "/consent/", "/cookies/", "/spasibo/"].includes(p)).map(([p]) => p);
 if (siteUrl) {
   const base = siteUrl.replace(/\/$/, "");
   writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `<url><loc>${base}${p}</loc></url>`).join("\n")}\n</urlset>\n`);
