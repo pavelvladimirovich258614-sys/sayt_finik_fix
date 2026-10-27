@@ -62,7 +62,7 @@ node -v; command -v node
 say "Файлы настройки из репозитория ($BRANCH)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH" | tar -xz -C "$TMP" --strip-components=1
-for f in finikfix.service nginx-ip.conf; do [ -s "$TMP/deploy/$f" ] || die "нет файла deploy/$f в репозитории"; done
+for f in finikfix.service nginx-ip.conf finikfix-backup.sh; do [ -s "$TMP/deploy/$f" ] || die "нет файла deploy/$f в репозитории"; done
 
 say "Пользователь и каталоги"
 id finikfix >/dev/null 2>&1 || useradd --system --home-dir "$BASE" --no-create-home --shell /usr/sbin/nologin finikfix
@@ -113,15 +113,7 @@ systemctl enable nginx
 systemctl reload nginx || systemctl restart nginx
 
 say "Ежедневная копия данных и настроек"
-cat > /etc/cron.daily/finikfix-backup <<'EOF'
-#!/bin/sh
-set -e
-B=/opt/finikfix/backups
-umask 077
-tar -czf "$B/finikfix-$(date +%Y%m%d).tar.gz" -C /opt/finikfix shared/data shared/.env shared/build.env
-ls -1t "$B"/finikfix-*.tar.gz | tail -n +15 | xargs -r rm -f
-EOF
-chmod 0755 /etc/cron.daily/finikfix-backup
+install -m 0755 "$TMP/deploy/finikfix-backup.sh" /etc/cron.daily/finikfix-backup
 
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
   say "ufw активен: открываю 22, 80, 443"

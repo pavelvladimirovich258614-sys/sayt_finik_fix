@@ -66,3 +66,21 @@ Actions → **Deploy FinikFix** → Run workflow (ветка `claude/epic-hypati
 2. В `/opt/finikfix/shared/build.env` задать `SITE_URL=https://ваш-домен`, при необходимости `METRIKA_ID`, `SITE_INN`. Токены Telegram — в `shared/.env` (`TG_BOT_TOKEN`, `TG_CHAT_ID`), затем `sudo systemctl restart finikfix`.
 3. Заменить `/etc/nginx/sites-available/finikfix` содержимым `deploy/nginx.conf` (с вашим `server_name`) и выпустить сертификат: `certbot --nginx -d домен -d www.домен`. Блок `location = /api/lead { return 503 … }` удалить — так включится приём заявок.
 4. Запустить Deploy FinikFix, чтобы пересобрать сайт с canonical и sitemap.
+
+## Портфолио и админка для Никиты
+
+Схема и защита описаны в `docs/PORTFOLIO-ADMIN.md`. Публичная галерея (`/portfolio/`, блок «Наши работы» на главной) читает `/api/portfolio`; пока работ нет, показывается ссылка на Авито. Данные: `/opt/finikfix/shared/data/portfolio.db` и `.../uploads/` (в ежедневной копии, база копируется согласованно через `VACUUM INTO`).
+
+Админка **выключена** и по HTTP не существует (приложение и nginx отвечают 404). Включать только после домена и HTTPS:
+
+1. Создать администратора (пароль вводится скрытно, не короче 12 символов, пароля по умолчанию нет):
+   ```bash
+   sudo -u finikfix bash -c 'set -a; . /opt/finikfix/shared/.env; set +a; cd /opt/finikfix/current && node --no-warnings scripts/create-admin.mjs Fil.nikita98@mail.ru'
+   ```
+   Повторный запуск с тем же email меняет пароль и закрывает старые сессии.
+2. В `/opt/finikfix/shared/.env` добавить строку `ADMIN_ENABLED=1`, затем `sudo systemctl restart finikfix`.
+3. Конфиг nginx для домена (`deploy/nginx.conf`) с блоком `/admin/api/` (лимит 32 МБ). Админка: `https://finikfix.ru/admin/`.
+4. Выключить: убрать `ADMIN_ENABLED` из `.env` и перезапустить сервис.
+
+Обновить скрипт ежедневной копии на сервере (после деплоя этой версии): повторно запустить `bootstrap-vps.sh` (он идемпотентен) или `sudo install -m 0755 /opt/finikfix/current/deploy/finikfix-backup.sh /etc/cron.daily/finikfix-backup`.
+
