@@ -23,7 +23,7 @@
 
 1. Зарегистрируйте аккаунт на https://claid.ai и создайте API key; проверьте стоимость/кредиты. Не сообщайте ключ в чат и не сохраняйте в Git.
 2. В терминале на компьютере разработчика передайте ключ через временную переменную окружения.
-   - PowerShell: `$env:CLAID_API_KEY = (Read-Host 'Claid API key' -AsSecureString | ConvertFrom-SecureString -AsPlainText)`
+   - PowerShell 5.1/7: `$secure = Read-Host 'Claid API key' -AsSecureString; $env:CLAID_API_KEY = (New-Object System.Net.NetworkCredential('x', $secure)).Password`
    - Bash: `read -rsp 'Claid API key: ' CLAID_API_KEY; echo; export CLAID_API_KEY`
 3. Выполните `npm run enhance:photos`.
    - Для одного фото: `npm run enhance:photos -- --only=slide-02-xbox.webp`
