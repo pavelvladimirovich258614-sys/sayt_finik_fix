@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { pairTotal } from "./pricing.mjs";
 export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
 import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
@@ -22,7 +22,7 @@ export const noInternet = `<div class="card warn reveal"><span class="tag">Че�
 
 export function photoBlock(o, cls = "") {
   return o.hasPhoto
-    ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}?v=${o.photoVer}"${o.hasPhotoSm ? ` srcset="/assets/img/master-640.webp?v=${o.photoVer} 640w, /assets/img/${o.photoFile}?v=${o.photoVer} 1024w" sizes="(max-width:860px) 92vw, 560px"` : ""} alt="Никита, мастер FinikFix, Ангарск" width="1024" height="1024" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
+    ? `<figure class="photo ${cls}"><img src="/assets/img/${o.photoFile}?v=${o.photoVer}"${imageUrl("portrait-hq", o.photoFile) ? ` data-hq-src="${imageUrl("portrait-hq", o.photoFile)}"` : ""}${o.hasPhotoSm ? ` srcset="/assets/img/master-640.webp?v=${o.photoVer} 640w, /assets/img/${o.photoFile}?v=${o.photoVer} 1024w" sizes="(max-width:860px) 92vw, 560px"` : ""} alt="Никита, мастер FinikFix, Ангарск" width="1024" height="1024" fetchpriority="high"><figcaption>${esc(site.owner)}, мастер FinikFix</figcaption></figure>`
     : `<figure class="photo ph ${cls}"><div><b>ff</b><span>Здесь будет фото мастера</span></div></figure>`;
 }
 
@@ -35,15 +35,18 @@ const ctlIcon = {
 
 // Слайдер первого экрана. Первый кадр грузится сразу (fetchpriority=high), остальные подгружает app.js после загрузки страницы (data-src).
 // Версия файла в адресе: при замене фото браузер не показывает старое из кэша.
-const fileVer = (rel) => { try { return "?v=" + createHash("md5").update(readFileSync(new URL(rel, import.meta.url))).digest("hex").slice(0, 8); } catch { return ""; } };
+const imageUrl = (folder, file) => {
+  const f = new URL("./assets/img/" + folder + "/" + file, import.meta.url);
+  if (!existsSync(f)) return null;
+  const v = createHash("md5").update(readFileSync(f)).digest("hex").slice(0, 8);
+  return "/assets/img/" + folder + "/" + file + "?v=" + v;
+};
 const HQ_W = 2560;
-// Оригинал (резерв) и HD-версия: браузер сам выбирает подходящую по размеру и плотности экрана; при ошибке HD app.js возвращает оригинал.
+// Оригинал (резерв) и HD-версия слайда: браузер сам выбирает подходящую по размеру и плотности экрана (без двойной загрузки);
+// при ошибке HD app.js возвращает оригинал (data-orig).
 const slideImg = (sl) => {
-  const orig = "/assets/img/slides/" + sl.file + fileVer("./assets/img/slides/" + sl.file);
-  const hqRel = "./assets/img/slides-hq/" + sl.file;
-  let hasHq = true; try { readFileSync(new URL(hqRel, import.meta.url)); } catch { hasHq = false; }
-  const hq = "/assets/img/slides-hq/" + sl.file + fileVer(hqRel);
-  return { src: orig, srcset: hasHq ? `${orig} ${sl.w}w, ${hq} ${HQ_W}w` : "" };
+  const orig = imageUrl("slides", sl.file), hq = imageUrl("slides-hq", sl.file);
+  return { src: orig, srcset: hq ? `${orig} ${sl.w}w, ${hq} ${HQ_W}w` : "" };
 };
 // Размер слайда в CSS-пикселях с учётом object-fit: cover (кадр 16:9): до 560 px квадрат, до 1100 px — 16:10, шире — рамка высотой ~840 px.
 const SLIDE_SIZES = "(max-width:560px) 178vw, (max-width:1100px) 111vw, 1500px";
@@ -60,6 +63,7 @@ export function heroSlider() {
   const dots = heroSlides.map((_, i) => `<button type="button" class="hs-dot" aria-label="Фото ${i + 1} из ${n}"${i ? "" : ' aria-current="true"'}></button>`).join("");
   return `<div class="hs-stage" role="region" aria-roledescription="карусель" aria-label="Фото мастера FinikFix">
   <div class="hs-slides" data-interval="5000">${slides}</div>
+  <span id="photo-enhance-status" class="visually-hidden" role="status" aria-live="polite"></span>
   <div class="hs-ctl" role="group" aria-label="Управление слайдером"><button type="button" class="hs-btn hs-prev" aria-label="Предыдущее фото">${ctlIcon.prev}</button><div class="hs-dots">${dots}</div><button type="button" class="hs-btn hs-next" aria-label="Следующее фото">${ctlIcon.next}</button><button type="button" class="hs-btn hs-pp" aria-label="Остановить смену фото" aria-pressed="false" data-pause="${esc(ctlIcon.pause)}" data-play="${esc(ctlIcon.play)}">${ctlIcon.pause}</button></div>
 </div>`;
 }
@@ -229,7 +233,7 @@ ${heroSlider()}
   <div class="cat-grid">${homeCats.map((hc) => {
     const c = categories.find((x) => x.slug === hc.slug);
     const text = c.intro.split(". ")[0].replace(/\.?$/, ".");
-    const pic = hc.img ? `<img src="/assets/img/cats/${hc.img}" alt="${esc(hc.title)} в мастерской FinikFix" width="800" height="500" loading="lazy" decoding="async">` : `<span class="cat-ph" aria-hidden="true">${icon(hc.icon, 56)}</span>`;
+    const pic = hc.img ? `<img src="/assets/img/cats/${hc.img}"${imageUrl("cats-hq", hc.img) ? ` data-hq-src="${imageUrl("cats-hq", hc.img)}"` : ""} alt="${esc(hc.title)} в мастерской FinikFix" width="800" height="500" loading="lazy" decoding="async">` : `<span class="cat-ph" aria-hidden="true">${icon(hc.icon, 56)}</span>`;
     return `<a class="cat-card reveal" href="/${hc.slug}/"><span class="cat-pic">${pic}</span><span class="cat-body"><span class="cat-t"><span class="ico">${icon(hc.icon, 22)}</span><h3>${esc(hc.title)}</h3></span><span class="cat-d">${esc(text)}</span><span class="more">Подробнее →</span></span></a>`;
   }).join("")}</div>
   <p class="cat-more reveal">Также: <a href="/vosstanovlennaya-tekhnika/">восстановленная техника</a> · <a href="/skupka/">скупка техники</a></p>
@@ -331,7 +335,7 @@ export function portfolioPage(o) {
   <div id="works-empty" class="card" hidden><h3>Работы скоро появятся</h3><p>Пока смотрите фото ремонтов в моём портфолио на Авито.</p><div class="acts">${portfolioBtn()}</div></div>
   <noscript><p class="note">Для просмотра галереи включите JavaScript или откройте <a href="${site.avito}" target="_blank" rel="noopener">портфолио на Авито</a>.</p></noscript>
 </div></section>
-<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
+<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><p class="lb-photo-status" role="status" aria-live="polite"></p><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
 ${contactSection()}`;
   return layout({ ...o, path: "/portfolio/", title: "Портфолио работ — FinikFix, Ангарск", desc: "Фото выполненных ремонтов игровых консолей, геймпадов, ноутбуков и ПК в мастерской FinikFix, Ангарск.", body });
 }
