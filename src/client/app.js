@@ -176,6 +176,22 @@
   var idle = window.requestIdleCallback || function (f) { setTimeout(f, 1200); };
   if (document.readyState === "complete") idle(preload); else window.addEventListener("load", function () { idle(preload); });
   schedule();
+
+  // Работы, отмеченные в админке «Включить в слайдер», добавляются в конец после основных шести фото
+  if (window.fetch) {
+    fetch("/api/portfolio/slides").then(function (r) { return r.json(); }).then(function (d) {
+      var dotsBox = stage.querySelector(".hs-dots");
+      (d.works || []).slice(0, 6).forEach(function (w) {
+        var ph = w.photos && w.photos[0]; if (!ph) return;
+        var fig = document.createElement("figure"); fig.className = "hs-slide"; fig.setAttribute("role", "group"); fig.setAttribute("aria-roledescription", "слайд"); fig.setAttribute("aria-hidden", "true"); fig.style.setProperty("--pos", "50%");
+        var img = document.createElement("img"); img.setAttribute("data-src", ph.src); img.alt = w.title; img.width = ph.width; img.height = ph.height; img.decoding = "async";
+        fig.appendChild(img); wrap.appendChild(fig); slides.push(fig);
+        var idx = slides.length - 1, dot = document.createElement("button"); dot.type = "button"; dot.className = "hs-dot";
+        dot.addEventListener("click", function () { go(idx); }); dotsBox.appendChild(dot); dots.push(dot);
+      });
+      slides.forEach(function (sl, i) { sl.setAttribute("aria-label", (i + 1) + " из " + slides.length); dots[i].setAttribute("aria-label", "Фото " + (i + 1) + " из " + slides.length); });
+    }).catch(function () {});
+  }
 })();
 
 // Портфолио: блок на главной и галерея /portfolio/ (данные из /api/portfolio)
