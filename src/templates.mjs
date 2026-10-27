@@ -1,4 +1,4 @@
-import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats } from "./data.mjs";
+import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech } from "./data.mjs";
 import { icon } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
@@ -42,6 +42,17 @@ export function heroSlider() {
 
 const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener" data-goal="messenger">MAX</a>` : "");
 const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
+
+// Сравнение стиков. Единица цены (за стик или за услугу) не подтверждена и не указывается; цены только «от».
+export function sticksBlock() {
+  return `<section class="alt" id="sticks"><div class="wrap">
+  <span class="eyebrow reveal">Замена стиков</span><h2 class="reveal">Какие стики я ставлю</h2>
+  <p class="lead reveal">Подберу вариант под ваш геймпад и бюджет. Ниже — три технологии и варианты с ценами.</p>
+  <div class="stick-tech">${Object.values(stickTech).map((t) => `<div class="card reveal"><span class="ico">${icon("stick", 26)}</span><span class="tag-s">${esc(t.tag)}</span><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`).join("")}</div>
+  <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">от ${rub(t.price)}</p></div>`).join("")}</div>
+  <p class="note reveal">Цены «от», не являются публичной офертой. Точная стоимость — после бесплатной диагностики. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
+</div></section>`;
+}
 
 export function leadForm(defaultCat = "") {
   const opts = [...categories.map((c) => c.cat), "Другое"];
@@ -215,6 +226,7 @@ export function categoryPage(c, o) {
 ${c.noprices ? "" : `<section><div class="wrap"><span class="eyebrow">Цены</span><h2>Услуги и цены</h2>${priceTable(items)}<p class="note">${c.slug === "remont-smartfonov" ? "Минимальный заказ — 500 ₽. Диагностика бесплатна при ремонте. " : "Точная стоимость — после бесплатной диагностики. "}Цены «от» не являются публичной офертой.</p></div></section>`}
 ${c.more ? `<section><div class="wrap two"><div><span class="eyebrow">Что делаю</span><h2>Что ещё ремонтирую</h2><ul class="ticks">${c.more.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.devices ? `<p class="note">${esc(c.devices)}</p>` : ""}</div><div><span class="eyebrow">Как всё устроено</span><h2>Порядок работы</h2><div class="grid one steps">${c.process.map(([h, p]) => `<div class="card reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("")}</div></div></div></section>` : ""}
 <section class="alt"><div class="wrap two"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div>${noInternet}</div></section>
+${c.slug === "remont-gamepadov" ? sticksBlock() : ""}
 ${requestSection(c.cat)}
 <section><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(c.faq)}<div class="portfolio-row">${portfolioBtn()}</div></div></section>`;
   return layout({ ...o, path: `/${c.slug}/`, title: c.title + ` — ${site.brand}`, desc: c.desc, body, jsonld: [serviceLd(c.h1, c.desc), faqLd(c.faq)] });
@@ -225,6 +237,7 @@ export function narrowPage(n, o) {
 <section class="page-hero"><div class="wrap"><span class="badge">${esc(n.cat)}</span><h1>${esc(n.h1)}</h1></div></section>
 <section><div class="wrap article">${n.sections.map(([h, t]) => `<h2 class="reveal">${esc(h)}</h2><p class="reveal">${esc(t)}</p>`).join("")}
  <p><a href="/${n.back[0]}/">${esc(n.back[1])} →</a></p><div>${portfolioBtn()}</div></div></section>
+${n.slug === "zamena-stika-gamepada" ? sticksBlock() : ""}
 ${requestSection(n.cat)}
 <section class="alt"><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(n.faq)}</div></section>`;
   return layout({ ...o, path: `/${n.slug}/`, title: n.title + ` — ${site.brand}`, desc: n.desc, body, jsonld: [serviceLd(n.h1, n.desc), faqLd(n.faq)] });
