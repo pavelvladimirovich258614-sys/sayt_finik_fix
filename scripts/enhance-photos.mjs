@@ -2,7 +2,7 @@
 // Работает отдельно от сборки/деплоя: внешние API НЕ вызываются при просмотре сайта.
 // API-ключ читается только из CLAID_API_KEY, исходники никогда не перезаписываются.
 import { readFile, mkdir, writeFile, rename, rm, access } from "node:fs/promises";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { heroSlides, homeCats } from "../src/data.mjs";
@@ -79,4 +79,4 @@ async function main() {
   console.log("Готово: " + ok + ", ошибки: " + failed + ". Файлы HD необходимо проверить и закоммитить до деплоя.");
   if (failed) process.exitCode = 1;
 }
-if (process.argv[1] && fileURLToPath(import.meta.url) === join(process.cwd(), process.argv[1])) main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
