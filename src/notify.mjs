@@ -2,7 +2,7 @@
 // Основной канал — MAX (src/max.mjs). Telegram отключён: Bot API недоступен с российского VPS (см. docs/LEADS.md).
 import { maxChannel } from "./max.mjs";
 
-export function channelsFromEnv(env, fetchImpl = fetch) {
+export function channelsFromEnv(env, fetchImpl) {
   // Единственный автоматический канал уведомлений — MAX (Telegram Bot API недоступен с российского VPS и отключён).
   // MAX_RECIPIENT_USER_IDS: MAX user_id получателей через запятую; на каждого своя запись доставки.
   const ids = String(env.MAX_RECIPIENT_USER_IDS || "").split(",").map((x) => x.trim()).filter((x) => /^\d{1,20}$/.test(x));
