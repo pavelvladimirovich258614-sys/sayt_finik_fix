@@ -2,9 +2,9 @@
 // Telegram: Bot API, метод sendMessage (https://core.telegram.org/bots/api#sendmessage). MAX: НЕ реализован,
 // пока нет доступа к документации и подтверждённого бота (см. docs/LEADS.md).
 
-export function telegramChannel({ token, chatId, fetchImpl = fetch, timeoutMs = 5000 }) {
+export function telegramChannel({ token, chatId, name = "telegram", fetchImpl = fetch, timeoutMs = 5000 }) {
   return {
-    name: "telegram",
+    name,
     async send(text) {
       const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -19,12 +19,16 @@ export function telegramChannel({ token, chatId, fetchImpl = fetch, timeoutMs = 
 
 export function channelsFromEnv(env, fetchImpl = fetch) {
   const list = [];
-  if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) list.push(telegramChannel({ token: env.TG_BOT_TOKEN, chatId: env.TG_CHAT_ID, fetchImpl }));
+  // TG_CHAT_ID: один id или несколько через запятую; на каждого получателя своя запись доставки (сбой одного не блокирует другого).
+  const ids = String(env.TG_CHAT_ID || "").split(",").map((x) => x.trim()).filter((x) => /^-?\d+$/.test(x));
+  if (env.TG_BOT_TOKEN) ids.forEach((id, i) => list.push(telegramChannel({ token: env.TG_BOT_TOKEN, chatId: id, name: ids.length > 1 ? `telegram-${i + 1}` : "telegram", fetchImpl })));
   return list;
 }
 
 export function leadText(l) {
-  return ["Новая заявка на обратный звонок FinikFix", `Имя: ${l.name}`, `Телефон: ${l.phone}`, l.comment ? `Комментарий: ${l.comment}` : "", l.calc ? `Калькулятор: ${l.calc}` : "", l.page ? `Страница: ${l.page}` : ""].filter(Boolean).join("\n");
+  const dt = new Date(String(l.created_at || "").replace(" ", "T") || Date.now());
+  const when = isNaN(dt) ? "" : dt.toLocaleString("ru-RU", { timeZone: "Asia/Irkutsk", dateStyle: "short", timeStyle: "short" }) + " (Иркутск)";
+  return ["Новая заявка на обратный звонок FinikFix", `Имя: ${l.name}`, `Телефон: ${l.phone}`, l.comment ? `Комментарий: ${l.comment}` : "", l.calc ? `Расчёт на сайте: ${l.calc}` : "", l.page ? `Страница: ${l.page}` : "", when ? `Дата: ${when}` : ""].filter(Boolean).join("\n");
 }
 
 /** Пробует доставить все ожидающие отправки. Возвращает число доставленных. */

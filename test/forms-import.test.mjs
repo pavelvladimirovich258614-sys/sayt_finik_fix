@@ -181,3 +181,15 @@ test("/api/config отражает включённые функции", async (
   let t = await boot(); assert.deepEqual(await (await t.call("/api/config")).json(), { reviews: false, leads: false }); t.close();
   t = await boot({ REVIEWS_FORM: "1", LEADS_ENABLED: "1" }, { channels: [mockCh()] }); assert.deepEqual(await (await t.call("/api/config")).json(), { reviews: true, leads: true }); t.close();
 });
+
+test("Telegram: несколько получателей, на каждого своя доставка; токен не попадает в ошибку", async () => {
+  const { channelsFromEnv } = await import("../src/notify.mjs");
+  const calls = [];
+  const fakeFetch = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return { ok: calls.length !== 2, status: 401, json: async () => ({ ok: calls.length !== 2, description: "Unauthorized" }) }; };
+  const ch = channelsFromEnv({ TG_BOT_TOKEN: "SECRET:TOKEN", TG_CHAT_ID: "111, 222 ,bad" }, fakeFetch);
+  assert.deepEqual(ch.map((c) => c.name), ["telegram-1", "telegram-2"]);
+  await ch[0].send("hi");
+  assert.equal(calls[0].body.chat_id, "111");
+  await assert.rejects(ch[1].send("hi"), (e) => { assert.doesNotMatch(e.message, /SECRET/); return /telegram 401/.test(e.message); });
+  assert.deepEqual(channelsFromEnv({ TG_BOT_TOKEN: "x" }).length, 0);
+});
