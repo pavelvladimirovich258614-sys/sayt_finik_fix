@@ -12,7 +12,7 @@ on:
       op:
         description: "Операция"
         type: choice
-        options: [probe, net, logs, status, backup, max-check, max-discover, max-setup, max-test, max-discover-vps, enable-reviews, enable-leads, test-lead, enable-admin, clear-telegram, verify]
+        options: [probe, net, max-tls, logs, status, backup, max-check, max-discover, max-setup, max-test, max-discover-vps, enable-reviews, enable-leads, test-lead, enable-admin, clear-telegram, verify]
         default: probe
 
 permissions:
@@ -41,10 +41,29 @@ jobs:
         run: |
           set -euo pipefail
           OP="${{ inputs.op }}"; [ -n "$OP" ] || OP="${GITHUB_REF_NAME#ops/}"
-          case "$OP" in probe|net|logs|status|backup|max-check|max-discover|max-setup|max-test|max-discover-vps|enable-reviews|enable-leads|test-lead|enable-admin|clear-telegram|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
+          case "$OP" in probe|net|max-tls|logs|status|backup|max-check|max-discover|max-setup|max-test|max-discover-vps|enable-reviews|enable-leads|test-lead|enable-admin|clear-telegram|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
           git fetch -q origin claude/epic-hypatia-mxxztu
           git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
           echo "op=$OP" >> "$GITHUB_OUTPUT"; echo "Операция: $OP"
+
+      - name: Цепочка TLS MAX (раннер GitHub и официальные корневые сертификаты)
+        if: ${{ steps.op.outputs.op == 'max-tls' }}
+        run: |
+          set -uo pipefail
+          H=platform-api2.max.ru; D=$(mktemp -d); cd "$D"
+          echo "== цепочка, которую предъявляет $H"
+          echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>/dev/null > chain.txt
+          awk '/BEGIN CERTIFICATE/{n++} n{print > ("c" n ".pem")} /END CERTIFICATE/{}' chain.txt
+          for f in c*.pem; do echo "-- $f"; openssl x509 -in $f -noout -subject -issuer -dates -fingerprint -sha256 2>&1; done
+          echo "== проверка без доверенного корня: $(echo | openssl s_client -connect $H:443 -servername $H 2>&1 | grep 'Verify return code')"
+          for u in russian_trusted_root_ca_pem.crt russian_trusted_sub_ca_2024_pem.crt; do
+            echo "== официальный файл $u (gu-st.ru)"
+            curl -sS -m 20 -o $u "https://gu-st.ru/content/lending/$u" && openssl x509 -in $u -noout -subject -issuer -dates -fingerprint -sha256 2>&1
+          done
+          if [ -s russian_trusted_root_ca_pem.crt ]; then cat russian_trusted_root_ca_pem.crt russian_trusted_sub_ca_2024_pem.crt > bundle.pem 2>/dev/null
+            echo "== проверка с корнем Минцифры: $(echo | openssl s_client -connect $H:443 -servername $H -CAfile bundle.pem 2>&1 | grep 'Verify return code')"
+            echo "== Node с NODE_EXTRA_CA_CERTS: $(NODE_EXTRA_CA_CERTS=$D/bundle.pem node -e 'fetch("https://platform-api2.max.ru/me").then(r=>console.log("HTTP",r.status)).catch(e=>console.log("ошибка",e.cause&&e.cause.code))')"
+          fi
 
       - uses: actions/setup-node@v4
         if: ${{ steps.op.outputs.op == 'max-check' || steps.op.outputs.op == 'max-discover' }}
@@ -109,6 +128,16 @@ jobs:
           done
           echo "== порт 443 api.telegram.org: $(timeout 6 bash -c 'echo > /dev/tcp/api.telegram.org/443' 2>&1 && echo открыт || echo закрыт-или-таймаут)"
           echo "== исходящий IP: $(curl -sS -m 8 https://api.ipify.org 2>&1)"
+          REMOTE
+              ;;
+            max-tls)
+              ssh -T finikfix 'bash -s' <<'REMOTE'
+          H=platform-api2.max.ru
+          echo "== с VPS: цепочка $H"
+          echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>/dev/null | awk '/BEGIN CERTIFICATE/{n++} n{print > ("/tmp/ffc" n ".pem")}'
+          for f in /tmp/ffc*.pem; do echo "-- $f"; openssl x509 -in $f -noout -subject -issuer -fingerprint -sha256 2>&1; rm -f $f; done
+          echo "== проверка на VPS: $(echo | openssl s_client -connect $H:443 -servername $H 2>&1 | grep 'Verify return code')"
+          echo "== Node на VPS: $(node -e 'fetch("https://platform-api2.max.ru/me").then(r=>console.log("HTTP",r.status)).catch(e=>console.log("ошибка",e.cause&&e.cause.code))')"
           REMOTE
               ;;
             logs) ssh -T finikfix "sudo -n /usr/bin/journalctl -u finikfix -n 80 --no-pager" | sed -E 's/[0-9]{6,12}:[A-Za-z0-9_-]{30,}/***TOKEN***/g' ;;
