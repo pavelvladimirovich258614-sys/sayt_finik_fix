@@ -12,7 +12,7 @@ on:
       op:
         description: "Операция"
         type: choice
-        options: [probe, net, max-tls, logs, status, backup, max-check, max-discover, max-setup, max-test, max-discover-vps, enable-reviews, enable-leads, test-lead, enable-admin, clear-telegram, verify]
+        options: [probe, net, max-tls, max-ca-show, logs, status, backup, max-check, max-discover, max-setup, max-test, max-discover-vps, enable-reviews, enable-leads, test-lead, enable-admin, clear-telegram, verify]
         default: probe
 
 permissions:
@@ -41,10 +41,27 @@ jobs:
         run: |
           set -euo pipefail
           OP="${{ inputs.op }}"; [ -n "$OP" ] || OP="${GITHUB_REF_NAME#ops/}"
-          case "$OP" in probe|net|max-tls|logs|status|backup|max-check|max-discover|max-setup|max-test|max-discover-vps|enable-reviews|enable-leads|test-lead|enable-admin|clear-telegram|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
+          case "$OP" in probe|net|max-tls|max-ca-show|logs|status|backup|max-check|max-discover|max-setup|max-test|max-discover-vps|enable-reviews|enable-leads|test-lead|enable-admin|clear-telegram|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
           git fetch -q origin claude/epic-hypatia-mxxztu
           git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
           echo "op=$OP" >> "$GITHUB_OUTPUT"; echo "Операция: $OP"
+
+      - name: Корневой сертификат Минцифры (публичный), печать PEM и сверка отпечатка
+        if: ${{ steps.op.outputs.op == 'max-ca-show' }}
+        run: |
+          set -euo pipefail
+          D=$(mktemp -d); cd "$D"
+          curl -fsS -m 30 -o root.crt https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt
+          openssl x509 -in root.crt -noout -subject -issuer -dates -fingerprint -sha256
+          echo "serial: $(openssl x509 -in root.crt -noout -serial)"
+          echo "isCA: $(openssl x509 -in root.crt -noout -text | grep -A1 'Basic Constraints' | tr -d '\n')"
+          FP=$(openssl x509 -in root.crt -noout -fingerprint -sha256 | cut -d= -f2)
+          [ "$FP" = "D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31" ] || { echo "::error::Отпечаток корня не совпал с ожидаемым"; exit 1; }
+          echo "отпечаток совпал с ожидаемым (D2:6D:2D:02:…:CF:31)"
+          openssl x509 -in root.crt -outform PEM
+          echo "== проверка цепочки MAX с этим корнем"
+          cp root.crt bundle.pem; echo >> bundle.pem
+          echo | openssl s_client -connect platform-api2.max.ru:443 -servername platform-api2.max.ru -CAfile bundle.pem 2>&1 | grep 'Verify return code'
 
       - name: Цепочка TLS MAX (раннер GitHub и официальные корневые сертификаты)
         if: ${{ steps.op.outputs.op == 'max-tls' }}
