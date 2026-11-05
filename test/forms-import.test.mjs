@@ -142,7 +142,7 @@ test("отзывы: лимит отправок с одного адреса", a
 });
 
 const lead = (o = {}) => ({ name: "Олег", phone: "+7 (901) 111-22-33", comment: "PS5 не включается", consent: true, ...o });
-const mockCh = (fail = false) => { const sent = []; return { sent, name: "telegram", send: async (t) => { if (fail) throw new Error("telegram 502"); sent.push(t); } }; };
+const mockCh = (fail = false) => { const sent = []; return { sent, name: "max-111", send: async (t) => { if (fail) throw new Error("telegram 502"); sent.push(t); } }; };
 
 test("заявки: по умолчанию 503; без каналов 503; без согласия 400", async () => {
   let t = await boot(); assert.equal((await t.call("/api/lead", { method: "POST", body: lead() })).status, 503); t.close();
@@ -158,7 +158,7 @@ test("заявки: доставка в Telegram (мок), параметры к
   const ch = mockCh(); const t = await boot({ LEADS_ENABLED: "1" }, { channels: [ch] });
   const r = await t.call("/api/lead", { method: "POST", body: lead({ calc: { device: "PlayStation", service: "Замена HDMI-порта", range: "от 2 500 ₽" }, page: "/#calc" }) });
   const j = await r.json(); assert.equal(r.status, 201); assert.equal(j.saved, true); assert.equal(j.notified, true);
-  assert.equal(ch.sent.length, 1); assert.match(ch.sent[0], /\+79011112233/); assert.match(ch.sent[0], /Замена HDMI-порта/);
+  assert.equal(ch.sent.length, 1); assert.match(ch.sent[0], /НОВАЯ ЗАЯВКА/); assert.match(ch.sent[0], /\+79011112233/); assert.match(ch.sent[0], /Услуга: Замена HDMI-порта/); assert.match(ch.sent[0], /Устройство: PlayStation/); assert.match(ch.sent[0], /Заявка №1/);
   const h = await t.call("/api/lead", { method: "POST", body: lead({ website: "bot" }) }); assert.equal(h.status, 200);
   assert.equal(ch.sent.length, 1, "honeypot не уходит в Telegram");
   const st = openStore(t.dir); assert.equal(st.listLeads().length, 1); st.close(); t.close();
@@ -182,37 +182,4 @@ test("заявки: лимит частоты", async () => {
 test("/api/config отражает включённые функции", async () => {
   let t = await boot(); assert.deepEqual(await (await t.call("/api/config")).json(), { reviews: false, leads: false }); t.close();
   t = await boot({ REVIEWS_FORM: "1", LEADS_ENABLED: "1" }, { channels: [mockCh()] }); assert.deepEqual(await (await t.call("/api/config")).json(), { reviews: true, leads: true }); t.close();
-});
-
-test("Telegram: несколько получателей, на каждого своя доставка; токен не попадает в ошибку", async () => {
-  const { channelsFromEnv } = await import("../src/notify.mjs");
-  const calls = [];
-  const fakeFetch = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return { ok: calls.length !== 2, status: 401, json: async () => ({ ok: calls.length !== 2, description: "Unauthorized" }) }; };
-  const ch = channelsFromEnv({ TG_BOT_TOKEN: "SECRET:TOKEN", TG_CHAT_ID: "111, 222 ,bad" }, fakeFetch);
-  assert.deepEqual(ch.map((c) => c.name), ["telegram-1", "telegram-2"]);
-  await ch[0].send("hi");
-  assert.equal(calls[0].body.chat_id, "111");
-  await assert.rejects(ch[1].send("hi"), (e) => { assert.doesNotMatch(e.message, /SECRET/); return /telegram 401/.test(e.message); });
-  assert.deepEqual(channelsFromEnv({ TG_BOT_TOKEN: "x" }).length, 0);
-});
-
-test("досевание при старте: только по флагу, добавляет недостающее, повтор без изменений", async () => {
-  const { seedOnStart } = await import("../src/seed.mjs");
-  const root = join(import.meta.dirname, ".."), flag = join(root, "content", ".seed-on-start"), logs = [];
-  const { existsSync, unlinkSync, writeFileSync: wf } = await import("node:fs");
-  const had = existsSync(flag);
-  try {
-    if (had) unlinkSync(flag);
-    const dir = tmp();
-    assert.equal(await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) }), null, "без флага ничего не делает");
-    wf(flag, "");
-    const r1 = await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) });
-    assert.equal(r1.changed, true); assert.equal(r1.rv.add, 62);
-    const st = openStore(dir); assert.equal(st.listPublic().length, 10); assert.equal(st.listReviews({ source: "avito", status: "approved" }).length, 32);
-    // правка в админке не затирается, повтор ничего не добавляет
-    st.setPublished(st.getWorkBySource("AV-03").id, false); st.close();
-    const r2 = await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) });
-    assert.equal(r2.changed, false);
-    const st2 = openStore(dir); assert.equal(st2.listPublic().length, 9, "скрытая админом работа осталась скрытой"); st2.close();
-  } finally { if (had) wf(flag, ""); else if (existsSync(flag)) unlinkSync(flag); }
 });

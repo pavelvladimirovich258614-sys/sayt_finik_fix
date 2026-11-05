@@ -24,9 +24,9 @@ export function cleanLead(b) {
   if (b.consent !== true) return { error: "Нужно согласие на обработку персональных данных" };
   if (name.length < 2) return { error: "Укажите имя" };
   if (!d || d[0] !== "9" && !/^[3-8]/.test(d[0])) return { error: "Проверьте номер телефона" };
-  // Выбранное в калькуляторе: только короткие строки известных полей.
+  // Выбранное в калькуляторе: только короткие строки известных полей, хранится как JSON ({device, service, range, note}).
   let calc = "";
-  if (b.calc && typeof b.calc === "object") calc = ["device", "service", "range", "note"].map((k) => (b.calc[k] ? `${k === "device" ? "Устройство" : k === "service" ? "Услуга" : k === "range" ? "Вилка" : "Примечание"}: ${strip(b.calc[k], 120)}` : "")).filter(Boolean).join("; ");
+  if (b.calc && typeof b.calc === "object") { const o = {}; for (const k of ["device", "service", "range", "note"]) { const v = strip(b.calc[k], 120); if (v) o[k] = v; } if (Object.keys(o).length) calc = JSON.stringify(o); }
   const page = /^\/[a-z0-9\-/]*$/i.test(String(b.page || "")) ? String(b.page).slice(0, 80) : "";
   return { lead: { name, phone: `+7${d}`, comment, calc, page } };
 }

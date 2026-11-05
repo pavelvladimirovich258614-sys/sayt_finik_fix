@@ -9,8 +9,8 @@ set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "запустите от root" >&2; exit 1; }
 id deploy >/dev/null 2>&1 || { echo "нет пользователя deploy" >&2; exit 1; }
 BASE_URL="https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy"
-SHA_OPS="9fc1bed3e4c61f1b7b0f15aa95d3e419891ec888195b79d4ed9a6d6c2f85bade"
-SHA_BLK="558047f186f917c93e2d3cf5af6f8b5d28f111ec43223c8070110c03ec7be883"
+SHA_OPS="57a99c241268eca35e06f1e5ca42851db6486750747cbaa6286bdb7c19848ab5"
+SHA_BLK="6e6af8d9097d5ec8c630719db59d535a12689748b672bc1f3b06832fbf883612"
 command -v python3 >/dev/null || { apt-get update -y && apt-get install -y python3; }
 command -v visudo >/dev/null || { echo "нет visudo" >&2; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT; chmod 700 "$TMP"

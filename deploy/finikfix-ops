@@ -30,8 +30,8 @@ case "$cmd" in
   status)
     echo "release: $(readlink -f "$CUR" || echo none)  sha: $(cat "$CUR/.release-sha" 2>/dev/null || echo ?)"
     echo "service: $(systemctl is-active finikfix)"
-    for k in DATA_DIR ADMIN_ENABLED REVIEWS_FORM LEADS_ENABLED TG_BOT_TOKEN TG_CHAT_ID IP_SALT; do env_has "$k" && echo "env $k: задан" || echo "env $k: НЕ задан"; done
-    "$0" nginx-lead status 2>&1 | sed "s/^/nginx: /"
+    for k in DATA_DIR ADMIN_ENABLED REVIEWS_FORM LEADS_ENABLED MAX_BOT_TOKEN MAX_RECIPIENT_USER_IDS MAX_API_BASE IP_SALT TG_BOT_TOKEN TG_CHAT_ID; do env_has "$k" && echo "env $k: задан" || echo "env $k: НЕ задан"; done
+    "$0" nginx-lead status 2>&1 | sed "s/^/nginx lead: /"; "$0" nginx-admin status 2>&1 | sed "s/^/nginx admin: /"
     ls -la "$DATA" | head -20; ls "$DATA/uploads" 2>/dev/null | wc -l | sed 's/^/файлов в uploads: /'
     ls -1t "$DATA/backups" 2>/dev/null | head -5 | sed 's/^/копия: /' ;;
   backup)
@@ -45,41 +45,57 @@ case "$cmd" in
   import-portfolio) [ "${1:-}" = "commit" ] && node_app scripts/import-portfolio.mjs --commit || node_app scripts/import-portfolio.mjs ;;
   import-reviews)   [ "${1:-}" = "commit" ] && node_app scripts/import-reviews.mjs --commit   || node_app scripts/import-reviews.mjs ;;
   set-secret) # значение читается из stdin, не печатается
-    [ "${1:-}" = "TG_BOT_TOKEN" ] || { echo "разрешён только TG_BOT_TOKEN" >&2; exit 2; }
+    [ "${1:-}" = "MAX_BOT_TOKEN" ] || { echo "разрешён только MAX_BOT_TOKEN" >&2; exit 2; }
     IFS= read -r v || true; v="${v%$'\r'}"
-    [[ "$v" =~ ^[0-9]{6,12}:[A-Za-z0-9_-]{30,60}$ ]] || { echo "значение не похоже на токен Telegram-бота" >&2; exit 2; }
-    env_set TG_BOT_TOKEN "$v"; echo "TG_BOT_TOKEN записан (значение не выводится)" ;;
+    [[ "$v" =~ ^[A-Za-z0-9_.~:-]{16,300}$ ]] || { echo "значение не похоже на токен MAX-бота" >&2; exit 2; }
+    env_set MAX_BOT_TOKEN "$v"; echo "MAX_BOT_TOKEN записан (значение не выводится)" ;;
   set-env)
     k="${1:-}"; v="${2:-}"
     case "$k" in
-      TG_CHAT_ID) [[ "$v" =~ ^-?[0-9]+(,-?[0-9]+){0,4}$ ]] || { echo "TG_CHAT_ID: числа через запятую" >&2; exit 2; } ;;
-      REVIEWS_FORM|LEADS_ENABLED) [[ "$v" =~ ^[01]$ ]] || { echo "$k: 0 или 1" >&2; exit 2; } ;;
+      MAX_RECIPIENT_USER_IDS) [[ "$v" =~ ^[0-9]{1,20}(,[0-9]{1,20}){0,4}$ ]] || { echo "MAX_RECIPIENT_USER_IDS: числа через запятую" >&2; exit 2; } ;;
+      MAX_API_BASE) [[ "$v" =~ ^https://platform-api[0-9]*\.max\.ru$ ]] || { echo "MAX_API_BASE: только https://platform-api*.max.ru" >&2; exit 2; } ;;
+      REVIEWS_FORM|LEADS_ENABLED|ADMIN_ENABLED) [[ "$v" =~ ^[01]$ ]] || { echo "$k: 0 или 1" >&2; exit 2; } ;;
       *) echo "ключ не разрешён" >&2; exit 2 ;;
     esac
     env_set "$k" "$v"; echo "$k обновлён" ;;
+  unset-env) # только устаревшие ключи Telegram
+    k="${1:-}"; case "$k" in TG_BOT_TOKEN|TG_CHAT_ID|TG_API_BASE) ;; *) echo "ключ не разрешён" >&2; exit 2 ;; esac
+    cp -p "$ENVF" "$BASE/backups/env-$(date +%Y%m%d-%H%M%S).bak"; chmod 600 "$BASE"/backups/env-*.bak
+    tmp="$(mktemp)"; grep -v "^${k}=" "$ENVF" > "$tmp" || true; cat "$tmp" > "$ENVF"; rm -f "$tmp"; chown root:finikfix "$ENVF"; chmod 0640 "$ENVF"; echo "$k удалён" ;;
   gen-salt) env_has IP_SALT && echo "IP_SALT уже задан" || { env_set IP_SALT "$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)"; echo "IP_SALT создан"; } ;;
-  tg-check) node_app scripts/telegram-check.mjs ;;
-  tg-test)  node_app scripts/telegram-check.mjs --send ;;
-  nginx-lead)
+  max-check)    node_app scripts/max-tool.mjs me ;;
+  max-discover) node_app scripts/max-tool.mjs discover ;;
+  max-test)     node_app scripts/max-tool.mjs test ;;
+  max-status)   node_app scripts/max-tool.mjs status ;;
+  nginx-show) # только чтение: server/location-строки без значений секретов
+    nginx -T 2>/dev/null | grep -nE '^# configuration file|server_name|listen |location |return (404|503)|proxy_pass|client_max_body_size|ssl_certificate ' | head -60 ;;
+  nginx-lead|nginx-admin)
+    TGT=lead; [ "$cmd" = nginx-admin ] && TGT=admin
     sub="${1:-status}"; BLK=/usr/local/lib/finikfix/nginx_lead_block.py
     [ -f "$BLK" ] && [ "$(stat -c %U "$BLK")" = root ] || { echo "нет $BLK (установите помощник заново)" >&2; exit 1; }
     # Кандидаты: файлы, где nginx реально читает location = /api/lead, и это конфигурация FinikFix (проксирует на 127.0.0.1:3000).
     cands=""
-    for f in $(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location[ \t]*=[ \t]*\/api\/lead/{print f}' | sort -u); do
+    for f in $(nginx -T 2>/dev/null | awk -v t="$TGT" '/^# configuration file /{f=$4; sub(/:$/,"",f)} t=="lead" && /location[ \t]*=[ \t]*\/api\/lead/{print f} t=="admin" && /location[ \t]*\^~[ \t]*\/admin[ \t]*\{/{print f}' | sort -u); do
       real="$(readlink -f "$f")"; grep -q '127.0.0.1:3000' "$real" || continue
-      n="$(python3 "$BLK" "$real" --check)" || { echo "разбор $real не удался" >&2; exit 1; }
+      n="$(python3 "$BLK" "$real" --check --target "$TGT")" || { echo "разбор $real не удался" >&2; exit 1; }
       [ "$n" -gt 0 ] && cands="$cands $real"
     done
-    if [ "$sub" = "status" ]; then [ -n "$cands" ] && echo "временная заглушка 503 /api/lead ЕСТЬ в:$cands" || echo "временной заглушки 503 /api/lead нет"; exit 0; fi
-    [ "$sub" = "open" ] || { echo "nginx-lead status|open" >&2; exit 2; }
-    [ -n "$cands" ] || { echo "заглушки уже нет, nginx не менялся"; exit 0; }
+    if [ "$sub" = "status" ]; then [ -n "$cands" ] && echo "заглушка ($TGT) ЕСТЬ в:$cands" || echo "заглушки ($TGT) нет"; exit 0; fi
+    [ "$sub" = "open" ] || { echo "status|open" >&2; exit 2; }
+    [ -n "$cands" ] || { echo "заглушки ($TGT) уже нет, nginx не менялся"; exit 0; }
     ts="$(date +%Y%m%d-%H%M%S)"; install -d -m 0700 "$BASE/backups"
     restore() { for real in $cands; do cp -p "$BASE/backups/nginx-$(basename "$real")-$ts" "$real"; done; }
     for real in $cands; do cp -p "$real" "$BASE/backups/nginx-$(basename "$real")-$ts"; done
-    for real in $cands; do python3 "$BLK" "$real" || { restore; echo "правка не удалась, конфиг восстановлен" >&2; exit 1; }; done
+    for real in $cands; do python3 "$BLK" "$real" --target "$TGT" || { restore; echo "правка не удалась, конфиг восстановлен" >&2; exit 1; }; done
     if ! nginx -t 2>&1; then restore; nginx -t >/dev/null 2>&1 || true; echo "nginx -t не прошёл, конфиг восстановлен" >&2; exit 1; fi
     if ! systemctl reload nginx; then restore; systemctl reload nginx || true; echo "reload не удался, конфиг восстановлен" >&2; exit 1; fi
-    echo "заглушка удалена, nginx перезагружен (копия: $BASE/backups/nginx-*-$ts)" ;;
+    echo "заглушка ($TGT) удалена, nginx перезагружен (копия: $BASE/backups/nginx-*-$ts)" ;;
+  leads-status) # без персональных данных: номер, время, канал, статус, попытки, причина сбоя
+    node_app -e '
+      const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync(process.env.DATA_DIR+"/portfolio.db");
+      const rows=db.prepare("select l.id, l.created_at, d.channel, d.status, d.attempts, d.last_error, d.delivered_at from leads l left join lead_deliveries d on d.lead_id=l.id order by l.id desc, d.channel limit 20").all();
+      if(!rows.length)console.log("заявок нет");for(const r of rows)console.log(`заявка №${r.id} ${r.created_at} | ${r.channel||"-"} | ${r.status||"-"} | попыток ${r.attempts??0}${r.last_error?" | "+r.last_error:""}${r.delivered_at?" | доставлено "+r.delivered_at:""}`);
+      const t=db.prepare("select count(*) n from leads").get().n;console.log("всего заявок:",t)' ;;
   verify-data)
     node_app -e '
       const {DatabaseSync}=require("node:sqlite");const fs=require("fs");const d=process.env.DATA_DIR;

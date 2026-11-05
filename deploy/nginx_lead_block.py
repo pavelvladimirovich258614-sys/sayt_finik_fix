@@ -10,8 +10,13 @@
 """
 import os, re, sys, tempfile
 
-HEAD = re.compile(r'location\s*=\s*/api/lead\s*\{')
-COMMENT_KEYS = ('/api/lead', 'ВРЕМЕННО', 'заявок', 'location')
+# Разрешённые цели (белый список): временная заглушка заявок и временный запрет админки. Блок удаляется только если внутри есть ожидаемый return.
+TARGETS = {
+    'lead': (re.compile(r'location\s*=\s*/api/lead\s*\{'), re.compile(r'(?m)^\s*return\s+503\b')),
+    'admin': (re.compile(r'location\s*\^~\s*/admin\s*\{'), re.compile(r'(?m)^\s*return\s+404\b')),
+}
+HEAD = TARGETS['lead'][0]; MARK = TARGETS['lead'][1]
+COMMENT_KEYS = ('/api/lead', 'ВРЕМЕННО', 'заявок', 'location', 'Админки', 'админк')
 
 
 def scan_block(s, open_idx):
@@ -41,10 +46,11 @@ def scan_block(s, open_idx):
     return -1
 
 
-def find_blocks(s):
+def find_blocks(s, head=None, mark=None):
+    head = head or HEAD; mark = mark or MARK
     out, pos = [], 0
     while True:
-        m = HEAD.search(s, pos)
+        m = head.search(s, pos)
         if not m:
             break
         # строка с комментарием '#' перед location — не считаем
@@ -55,7 +61,7 @@ def find_blocks(s):
         if end < 0:
             raise ValueError('не найдена закрывающая скобка блока /api/lead')
         body = s[m.end():end]
-        if re.search(r'(?m)^\s*return\s+503\b', body):
+        if mark.search(body):
             out.append((ls, end + 1))
         pos = end + 1
     return out
@@ -74,8 +80,8 @@ def strip_leading_comments(s, start):
     return lines_start
 
 
-def remove(s):
-    blocks = find_blocks(s)
+def remove(s, target='lead'):
+    blocks = find_blocks(s, *TARGETS[target])
     for start, end in reversed(blocks):
         start = strip_leading_comments(s, start)
         tail = end
@@ -89,9 +95,14 @@ def main(argv):
     if len(argv) < 2:
         print(__doc__); return 2
     path, check = argv[1], '--check' in argv[2:]
+    target = 'lead'
+    if '--target' in argv:
+        target = argv[argv.index('--target') + 1] if argv.index('--target') + 1 < len(argv) else ''
+        if target not in TARGETS:
+            print('ОШИБКА: цель должна быть lead или admin', file=sys.stderr); return 2
     try:
         src = open(path, encoding='utf-8').read()
-        new, n = remove(src)
+        new, n = remove(src, target)
     except Exception as e:  # noqa
         print('ОШИБКА:', e, file=sys.stderr); return 2
     if check:

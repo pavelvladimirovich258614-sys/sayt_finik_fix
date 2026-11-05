@@ -16,14 +16,12 @@ export const site = {
   email: "Fil.nikita98@mail.ru",
   domain: "finikfix.ru", // будущий домен; пока сайт на IP
   max: process.env.SITE_MAX || "https://web.max.ru/259685091", // ссылка на диалог с мастером в MAX (не API бота); можно переопределить в .env (SITE_MAX)
-  avito: "https://www.avito.ru/user/03b95aa6aaecf41a989c9ba04bf9de85/portfolio",
-  avitoAd: "https://www.avito.ru/angarsk/predlozheniya_uslug/remont_smartfonov_i_planshetov_8158317905",
   hours: "пн–пт 10:00–20:00",
   place: "15-й микрорайон, мастерская по записи",
   inn: process.env.SITE_INN || "", // [Уточнить: ИНН самозанятого] — пока пусто, в подвале не выводится
   owner: "Никита Филиповский",
   preset: "Здравствуйте! Хочу узнать по ремонту...",
-  portfolioText: "24+ фото реальных ремонтов — смотрите в портфолио на Авито",
+  portfolioText: "Смотреть портфолио: реальные ремонты с фото",
   photo: "master.webp", // src/assets/img/master.webp (1024×1024) и master-640.webp; исходник в design-source/
 };
 
@@ -186,7 +184,7 @@ export const narrow = [
 
 export const pagesOther = {
   about: { title: "О мастере — FinikFix, Ангарск", desc: "Мастер FinikFix: консоли 10+ лет, смартфоны 3 года. Замеры напряжений, ремонт по схемам, договор/расписка/акт. Ангарск." },
-  reviews: { title: "Отзывы клиентов — FinikFix, Ангарск", desc: "Рейтинг профиля на Авито 4,8 (62 отзыва) и отзывы на сайте. Портфолио реальных ремонтов консолей и геймпадов." },
+  reviews: { title: "Отзывы клиентов — FinikFix, Ангарск", desc: "Отзывы клиентов (рейтинг профиля на Авито 4,8, 62 отзыва) и отзывы на сайте. Портфолио реальных ремонтов консолей и геймпадов." },
   contacts: { title: "Контакты — FinikFix, Ангарск", desc: "Телефон +7 (901) 662-45-89, WhatsApp, Telegram, ВКонтакте. Ангарск, 15-й микрорайон, мастерская по записи. пн–пт 10:00–20:00." },
   prices: { title: "Цены на ремонт — FinikFix, Ангарск", desc: "Прайс на ремонт консолей, геймпадов, смартфонов, ПК. Цены «от», точная стоимость после бесплатной диагностики." },
   shop: { title: "Восстановленная техника — FinikFix, Ангарск", desc: "Восстановленные консоли и геймпады с гарантией 90 дней. DualShock 4, Xbox Series S и другие." },
@@ -236,3 +234,6 @@ export const promos = {
   pairDiscount: { percent: 15, text: "При замене двух аналогов — скидка 15% от их общей стоимости (аналоги любых типов, в том числе разных)." },
   freeCleaning: { text: "При замене аналога внутренняя чистка геймпада — бесплатно. Только для этой услуги." },
 };
+
+// Соответствие страниц услуг категориям работ портфолио (для блока «Примеры работ» на странице услуги)
+export const workCats = { "remont-playstation": "playstation", "remont-xbox": "xbox", "remont-nintendo": "nintendo", "remont-gamepadov": "gamepads", "remont-noutbukov": "laptops", "remont-pk": "pc", "remont-smartfonov": "phones", "zamena-stika-gamepada": "gamepads", "zamena-hdmi-konsoli": "playstation" };
