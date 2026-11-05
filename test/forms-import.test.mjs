@@ -195,3 +195,24 @@ test("Telegram: несколько получателей, на каждого �
   await assert.rejects(ch[1].send("hi"), (e) => { assert.doesNotMatch(e.message, /SECRET/); return /telegram 401/.test(e.message); });
   assert.deepEqual(channelsFromEnv({ TG_BOT_TOKEN: "x" }).length, 0);
 });
+
+test("досевание при старте: только по флагу, добавляет недостающее, повтор без изменений", async () => {
+  const { seedOnStart } = await import("../src/seed.mjs");
+  const root = join(import.meta.dirname, ".."), flag = join(root, "content", ".seed-on-start"), logs = [];
+  const { existsSync, unlinkSync, writeFileSync: wf } = await import("node:fs");
+  const had = existsSync(flag);
+  try {
+    if (had) unlinkSync(flag);
+    const dir = tmp();
+    assert.equal(await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) }), null, "без флага ничего не делает");
+    wf(flag, "");
+    const r1 = await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) });
+    assert.equal(r1.changed, true); assert.equal(r1.rv.add, 62);
+    const st = openStore(dir); assert.equal(st.listPublic().length, 10); assert.equal(st.listReviews({ source: "avito", status: "approved" }).length, 32);
+    // правка в админке не затирается, повтор ничего не добавляет
+    st.setPublished(st.getWorkBySource("AV-03").id, false); st.close();
+    const r2 = await seedOnStart({ root, dataDir: dir, uploadDir: join(dir, "uploads"), log: (m) => logs.push(m) });
+    assert.equal(r2.changed, false);
+    const st2 = openStore(dir); assert.equal(st2.listPublic().length, 9, "скрытая админом работа осталась скрытой"); st2.close();
+  } finally { if (had) wf(flag, ""); else if (existsSync(flag)) unlinkSync(flag); }
+});

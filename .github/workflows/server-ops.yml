@@ -120,7 +120,7 @@ jobs:
             test-lead)
               post /api/lead '{"name":"ТЕСТ FinikFix (проверка)","phone":"+79990000000","comment":"Тестовая заявка от проверки доставки. Перезванивать не нужно.","consent":true,"page":"/"}' ;;
             verify)
-              need_helper; ops status; ops verify-data
+              have_helper && { ops status; ops verify-data; } || echo "(помощник не установлен: серверная часть пропущена, проверяю публичную)"
               curl -fsS -m 20 "$SITE/api/portfolio" | jq '{works: (.works|length), photos: ([.works[].photos|length]|add)}'
               n=0; bad=0
               for u in $(curl -fsS -m 20 "$SITE/api/portfolio" | jq -r '.works[].photos[].src'); do n=$((n+1)); c=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$SITE$u"); [ "$c" = 200 ] || { bad=$((bad+1)); echo "битый: $u $c"; }; done

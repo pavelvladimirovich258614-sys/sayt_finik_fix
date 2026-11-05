@@ -26,7 +26,7 @@ case "$cmd" in
     echo "release: $(readlink -f "$CUR" || echo none)  sha: $(cat "$CUR/.release-sha" 2>/dev/null || echo ?)"
     echo "service: $(systemctl is-active finikfix)"
     for k in DATA_DIR ADMIN_ENABLED REVIEWS_FORM LEADS_ENABLED TG_BOT_TOKEN TG_CHAT_ID IP_SALT; do env_has "$k" && echo "env $k: задан" || echo "env $k: НЕ задан"; done
-    echo "nginx блок /api/lead: $(grep -rl 'location = /api/lead' /etc/nginx/sites-enabled/ 2>/dev/null | head -1 || true)"
+    echo "nginx блок 503 /api/lead в: $(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location = \/api\/lead/{print f}' | sort -u | tr '\n' ' ')"
     ls -la "$DATA" | head -20; ls "$DATA/uploads" 2>/dev/null | wc -l | sed 's/^/файлов в uploads: /'
     ls -1t "$DATA/backups" 2>/dev/null | head -5 | sed 's/^/копия: /' ;;
   backup)
@@ -57,7 +57,7 @@ case "$cmd" in
   tg-test)  node_app scripts/telegram-check.mjs --send ;;
   nginx-lead)
     sub="${1:-status}"
-    files="$(grep -rl 'location = /api/lead' /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null || true)"
+    files="$(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location = \/api\/lead/{print f}' | sort -u || true)"
     if [ "$sub" = "status" ]; then [ -n "$files" ] && echo "блок 503 /api/lead ЕСТЬ в: $files" || echo "блока 503 /api/lead нет"; exit 0; fi
     [ "$sub" = "open" ] || { echo "nginx-lead status|open" >&2; exit 2; }
     [ -n "$files" ] || { echo "блока уже нет"; exit 0; }
