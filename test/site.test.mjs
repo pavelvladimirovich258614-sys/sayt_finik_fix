@@ -241,3 +241,23 @@ test("главная: шесть карточек «Почему мне дове
   assert.match(h, /<a class="btn" href="#calc"[^>]*>Узнать стоимость ремонта<\/a>/);
   assert.equal((h.match(/id="calc"/g) || []).length, 1, "второго калькулятора нет");
 });
+
+test("MAX: везде один фирменный значок (растр 1:1) или горизонтальный логотип, самодельных SVG нет", () => {
+  const pub1 = (p) => existsSync(pub(p));
+  assert.ok(pub1("assets/img/brand/max-icon.webp") && pub1("assets/img/brand/max-logo.webp"));
+  const src = ["src/icons.mjs", "src/templates.mjs", "src/client/style.css"].map((f) => readFileSync(f, "utf8")).join("\n");
+  assert.ok(!/ffmx|MAX_MARK|bi-max"[^>]*viewBox/.test(src), "старый SVG-значок MAX удалён");
+  let iconCount = 0;
+  for (const f of allHtml()) {
+    const h = readFileSync(f, "utf8");
+    assert.ok(!/<svg[^>]*bi-max/.test(h) && !h.includes("ffmx"), f);
+    for (const m of h.matchAll(/(?:src)="(\/assets\/img\/brand\/[^"]+)"/g)) {
+      assert.match(m[1], /^\/assets\/img\/brand\/max-(icon|logo)\.webp\?v=[0-9a-f]{8}$/, f);
+      assert.ok(existsSync(pub(m[1].split("?")[0])), `${f}: ${m[1]}`);
+      iconCount++;
+    }
+    if (h.includes("fl-max")) assert.match(h, /class="fl-max"[^>]*aria-label="Написать в MAX"[^>]*><img class="bi bi-max"[^>]*width="28" height="28"/);
+    assert.ok(!/cb-max[^>]*>[\s\S]{0,200}max-logo/.test(h), "в кнопке с подписью нет логотипа с надписью MAX");
+  }
+  assert.ok(iconCount > 20);
+});

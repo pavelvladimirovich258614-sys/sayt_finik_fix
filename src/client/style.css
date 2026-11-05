@@ -473,3 +473,13 @@ a.work-card{display:block;text-decoration:none;color:inherit}
 }
 @media(max-width:700px){.trust-grid{grid-template-columns:1fr;gap:14px}.trust-card h3{font-size:18px}}
 @media(max-width:380px){.hero-c h1{font-size:22px}.hero-alt .cbtn{flex:1 1 calc(50% - 8px);padding:0 8px}}
+
+/* v13: фирменный значок MAX (растровый, прозрачные углы) и горизонтальный логотип */
+.bi-max{display:block;object-fit:contain;border-radius:0!important;flex:none}
+.cbtn .bi-max{width:24px;height:24px}
+.hero-alt .cbtn .bi-max{width:22px;height:22px}
+.float .fl-max .bi-max{width:30px;height:30px}
+.mbar .bi-max{width:20px;height:20px}
+.max-pill{display:inline-flex;align-items:center;vertical-align:middle;background:#fff;border-radius:9px;padding:4px 9px;line-height:0;text-decoration:none}
+.max-pill .max-logo{display:block;height:22px;width:auto}
+.max-pill:hover{box-shadow:0 0 0 2px rgba(106,123,255,.55)}
