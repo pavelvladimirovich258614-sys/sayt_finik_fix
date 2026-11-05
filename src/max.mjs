@@ -1,3 +1,4 @@
+import { makeHttpsFetch } from "./max-tls.mjs";
 // Клиент MAX Bot API (https://dev.max.ru/docs-api): GET /me, GET /updates, POST /messages?user_id=.
 // Токен передаётся только в заголовке Authorization (никогда в query), в ошибки и журналы не попадает.
 export const MAX_DEFAULT_BASE = "https://platform-api2.max.ru";
@@ -5,7 +6,8 @@ export const MAX_TEXT_LIMIT = 3900; // лимит текста сообщени�
 
 export const safeBase = (v) => (/^https:\/\/platform-api[0-9]*\.max\.ru$/i.test(String(v || "").replace(/\/$/, "")) ? String(v).replace(/\/$/, "") : MAX_DEFAULT_BASE);
 
-export function maxClient({ token, base = MAX_DEFAULT_BASE, fetchImpl = fetch, timeoutMs = 8000 }) {
+export function maxClient({ token, base = MAX_DEFAULT_BASE, fetchImpl, timeoutMs = 8000 }) {
+  fetchImpl = fetchImpl || makeHttpsFetch(); // по умолчанию: TLS с доверием к корню Минцифры только для MAX
   const scrub = (s) => (token ? String(s).split(token).join("***") : String(s));
   async function call(method, path, { query, body } = {}) {
     const qs = query ? "?" + new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== "")).toString() : "";
