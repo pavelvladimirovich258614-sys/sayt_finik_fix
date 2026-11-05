@@ -22,6 +22,9 @@ export const ICONS = {
   search: `<circle cx="27" cy="27" r="16"/><path d="M39 39l15 15"/><path d="M17 28h5l3-6 4 12 3-6h3"/>`,
   tag: `<path d="M8 31L31 8h23v23L31 54z"/><circle cx="43" cy="19" r="3"/>`,
   shield: `<path d="M32 5l20 7v16c0 14-9 24-20 30-11-6-20-16-20-30V12z"/><path d="M23 31l7 7 12-14"/>`,
+  clock: `<circle cx="32" cy="32" r="24"/><path d="M32 17v16l10 7"/>`,
+  toolbox: `<path d="M10 24h44v28H10z"/><path d="M24 24v-8h16v8"/><path d="M10 36h44"/><path d="M28 33h8v7h-8z"/>`,
+  box: `<path d="M32 8l22 11v26L32 56 10 45V19z"/><path d="M10 19l22 11 22-11"/><path d="M32 30v26"/>`,
 };
 
 export const icon = (name, size = 28, cls = "") =>
