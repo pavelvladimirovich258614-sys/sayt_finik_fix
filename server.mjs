@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createPortfolio } from "./src/portfolio/api.mjs";
 import { createForms } from "./src/forms.mjs";
 import { channelsFromEnv, processDue } from "./src/notify.mjs";
+import { seedOnStart } from "./src/seed.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(root, "public");
@@ -45,5 +46,9 @@ export function createApp(env = process.env, opts = {}) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env.PORT || 3000), host = process.env.HOST || "127.0.0.1";
-  createApp().listen(port, host, () => console.log(`FinikFix: http://${host}:${port}`));
+  const dataDir = process.env.DATA_DIR || join(root, "data");
+  createApp().listen(port, host, () => {
+    console.log(`FinikFix: http://${host}:${port}`);
+    seedOnStart({ root, dataDir, uploadDir: process.env.UPLOAD_DIR || join(dataDir, "uploads") }).catch((e) => console.error("[seed] ошибка:", e.message));
+  });
 }
