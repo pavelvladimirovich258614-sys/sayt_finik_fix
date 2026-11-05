@@ -55,14 +55,15 @@ node --env-file=/opt/finikfix/shared/.env scripts/import-reviews.mjs --commit   
 Пользователь `deploy` не root. Чтобы импорт, секреты и nginx выполнялись из Actions без раздачи root, используется помощник `deploy/finikfix-ops` (root:root, deploy его менять не может; sudo разрешён только на него). Подкоманды фиксированные: status, backup, import-portfolio, import-reviews, set-secret (только TG_BOT_TOKEN, из stdin), set-env (белый список ключей), gen-salt, tg-check, tg-test, nginx-lead open, verify-data.
 
 **Разовые действия владельца:**
-1. На сервере от root установить помощник (просмотреть скрипт перед запуском):
+1. На сервере от root установить помощник. Установщик скачивает два файла и ставит их, только если SHA-256 совпадает с зашитым в нём; сам установщик проверьте командой `sha256sum -c` (контрольную сумму установщика даёт Claude в сообщении; она же вычисляется из файла в репозитории):
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy/install-ops-helper.sh -o /root/install-ops-helper.sh
-   less /root/install-ops-helper.sh
-   bash /root/install-ops-helper.sh
+   curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy/install-ops-helper.sh -o /root/install-ops-helper.sh
+   echo "<SHA256>  /root/install-ops-helper.sh" | sha256sum -c - && less /root/install-ops-helper.sh && bash /root/install-ops-helper.sh
    ```
 2. В GitHub: Settings → Secrets and variables → Actions → New repository secret `TG_BOT_TOKEN` (новый токен бота после /revoke). Значение не показывается в логах.
 3. Оба получателя (1274132933, 1831192124) нажали `/start` у @uved_nikita_bot.
 
 **Операции** (Actions → Server Ops FinikFix → Run workflow, либо push в ветку `ops/<операция>`): `probe` (без sudo), `status`, `backup`, `import-dry`, `import-commit`, `tg-setup`, `tg-test`, `enable-reviews`, `enable-leads`, `test-lead`, `verify`. Деплой: workflow «Deploy FinikFix» (вручную) либо push в ветку `release/production` (только коммит, уже входящий в `claude/epic-hypatia-mxxztu`).
 Порядок: deploy → import-dry → import-commit → tg-setup → tg-test (подтвердить получение) → enable-reviews → enable-leads → test-lead → verify. `enable-leads` не включится без успешной проверки бота (`tg-check`).
+
+**Безопасность помощника (проверено 2026-11-05).** Фиксированные подкоманды, без `eval` и произвольных путей; блокировка в `/run` (каталог `/opt/finikfix` доступен на запись пользователю `deploy`, поэтому lock там был бы уязвим к подмене символической ссылкой); токен принимается только из stdin в проверенном формате и не печатается; список ключей `set-env` ограничен (`TG_CHAT_ID`, `REVIEWS_FORM`, `LEADS_ENABLED`); админка помощником не включается. Остаточный риск: `import-*` и `tg-*` запускают код текущего релиза от пользователя `finikfix`, а релиз выкладывает `deploy`; это тот же уровень доверия, что у самого сервиса, который уже исполняет код этого релиза. Удаление заглушки nginx: `deploy/nginx_lead_block.py` (разбор скобок с учётом кавычек и комментариев; удаляется только блок с `return 503`), копия конфигурации в `/opt/finikfix/backups`, `nginx -t`, автоматическое восстановление при ошибке теста или перезагрузки.

@@ -6,7 +6,12 @@ set -euo pipefail
 BASE=/opt/finikfix; ENVF=$BASE/shared/.env; DATA=$BASE/shared/data
 NODE=/usr/bin/node
 [ "$(id -u)" -eq 0 ] || { echo "нужен root (через sudo)" >&2; exit 1; }
-exec 9>"$BASE/.ops.lock"; flock -n 9 || { echo "другая операция выполняется" >&2; exit 1; }
+LOCK=/run/finikfix-ops.lock
+if [ -z "${FFOPS_LOCKED:-}" ]; then   # sudo сбрасывает окружение, поэтому переменную может выставить только сам скрипт для своих вложенных вызовов
+  [ ! -L "$LOCK" ] || { echo "lock — символическая ссылка, отказ" >&2; exit 1; }
+  exec 9>"$LOCK"; flock -n 9 || { echo "другая операция выполняется" >&2; exit 1; }
+  export FFOPS_LOCKED=1
+fi
 CUR="$BASE/current"
 as_app() { runuser -u finikfix -- "$@"; }
 node_app() { (cd "$CUR" && as_app "$NODE" --env-file="$ENVF" --no-warnings "$@"); }
@@ -26,7 +31,7 @@ case "$cmd" in
     echo "release: $(readlink -f "$CUR" || echo none)  sha: $(cat "$CUR/.release-sha" 2>/dev/null || echo ?)"
     echo "service: $(systemctl is-active finikfix)"
     for k in DATA_DIR ADMIN_ENABLED REVIEWS_FORM LEADS_ENABLED TG_BOT_TOKEN TG_CHAT_ID IP_SALT; do env_has "$k" && echo "env $k: задан" || echo "env $k: НЕ задан"; done
-    echo "nginx блок 503 /api/lead в: $(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location = \/api\/lead/{print f}' | sort -u | tr '\n' ' ')"
+    "$0" nginx-lead status 2>&1 | sed "s/^/nginx: /"
     ls -la "$DATA" | head -20; ls "$DATA/uploads" 2>/dev/null | wc -l | sed 's/^/файлов в uploads: /'
     ls -1t "$DATA/backups" 2>/dev/null | head -5 | sed 's/^/копия: /' ;;
   backup)
@@ -48,7 +53,7 @@ case "$cmd" in
     k="${1:-}"; v="${2:-}"
     case "$k" in
       TG_CHAT_ID) [[ "$v" =~ ^-?[0-9]+(,-?[0-9]+){0,4}$ ]] || { echo "TG_CHAT_ID: числа через запятую" >&2; exit 2; } ;;
-      REVIEWS_FORM|LEADS_ENABLED|ADMIN_ENABLED) [[ "$v" =~ ^[01]$ ]] || { echo "$k: 0 или 1" >&2; exit 2; } ;;
+      REVIEWS_FORM|LEADS_ENABLED) [[ "$v" =~ ^[01]$ ]] || { echo "$k: 0 или 1" >&2; exit 2; } ;;
       *) echo "ключ не разрешён" >&2; exit 2 ;;
     esac
     env_set "$k" "$v"; echo "$k обновлён" ;;
@@ -56,25 +61,25 @@ case "$cmd" in
   tg-check) node_app scripts/telegram-check.mjs ;;
   tg-test)  node_app scripts/telegram-check.mjs --send ;;
   nginx-lead)
-    sub="${1:-status}"
-    files="$(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location = \/api\/lead/{print f}' | sort -u || true)"
-    if [ "$sub" = "status" ]; then [ -n "$files" ] && echo "блок 503 /api/lead ЕСТЬ в: $files" || echo "блока 503 /api/lead нет"; exit 0; fi
-    [ "$sub" = "open" ] || { echo "nginx-lead status|open" >&2; exit 2; }
-    [ -n "$files" ] || { echo "блока уже нет"; exit 0; }
-    ts="$(date +%Y%m%d-%H%M%S)"; install -d -m 0700 "$BASE/backups"
-    for f in $files; do
-      real="$(readlink -f "$f")"; cp -p "$real" "$BASE/backups/nginx-$(basename "$real")-$ts"
-      python3 - "$real" <<'PY'
-import re,sys
-p=sys.argv[1]; s=open(p).read()
-n=re.sub(r'\n[ \t]*location = /api/lead \{[^{}]*\}\n', '\n', s)
-if n==s: sys.exit("блок не найден по шаблону")
-open(p,'w').write(n)
-PY
+    sub="${1:-status}"; BLK=/usr/local/lib/finikfix/nginx_lead_block.py
+    [ -f "$BLK" ] && [ "$(stat -c %U "$BLK")" = root ] || { echo "нет $BLK (установите помощник заново)" >&2; exit 1; }
+    # Кандидаты: файлы, где nginx реально читает location = /api/lead, и это конфигурация FinikFix (проксирует на 127.0.0.1:3000).
+    cands=""
+    for f in $(nginx -T 2>/dev/null | awk '/^# configuration file /{f=$4; sub(/:$/,"",f)} /location[ \t]*=[ \t]*\/api\/lead/{print f}' | sort -u); do
+      real="$(readlink -f "$f")"; grep -q '127.0.0.1:3000' "$real" || continue
+      n="$(python3 "$BLK" "$real" --check)" || { echo "разбор $real не удался" >&2; exit 1; }
+      [ "$n" -gt 0 ] && cands="$cands $real"
     done
-    if nginx -t 2>/dev/null; then systemctl reload nginx; echo "блок удалён, nginx перезагружен"; else
-      for f in $files; do real="$(readlink -f "$f")"; cp -p "$BASE/backups/nginx-$(basename "$real")-$ts" "$real"; done
-      nginx -t || true; echo "nginx -t не прошёл, конфиг восстановлен" >&2; exit 1; fi ;;
+    if [ "$sub" = "status" ]; then [ -n "$cands" ] && echo "временная заглушка 503 /api/lead ЕСТЬ в:$cands" || echo "временной заглушки 503 /api/lead нет"; exit 0; fi
+    [ "$sub" = "open" ] || { echo "nginx-lead status|open" >&2; exit 2; }
+    [ -n "$cands" ] || { echo "заглушки уже нет, nginx не менялся"; exit 0; }
+    ts="$(date +%Y%m%d-%H%M%S)"; install -d -m 0700 "$BASE/backups"
+    restore() { for real in $cands; do cp -p "$BASE/backups/nginx-$(basename "$real")-$ts" "$real"; done; }
+    for real in $cands; do cp -p "$real" "$BASE/backups/nginx-$(basename "$real")-$ts"; done
+    for real in $cands; do python3 "$BLK" "$real" || { restore; echo "правка не удалась, конфиг восстановлен" >&2; exit 1; }; done
+    if ! nginx -t 2>&1; then restore; nginx -t >/dev/null 2>&1 || true; echo "nginx -t не прошёл, конфиг восстановлен" >&2; exit 1; fi
+    if ! systemctl reload nginx; then restore; systemctl reload nginx || true; echo "reload не удался, конфиг восстановлен" >&2; exit 1; fi
+    echo "заглушка удалена, nginx перезагружен (копия: $BASE/backups/nginx-*-$ts)" ;;
   verify-data)
     node_app -e '
       const {DatabaseSync}=require("node:sqlite");const fs=require("fs");const d=process.env.DATA_DIR;
