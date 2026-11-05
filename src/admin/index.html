@@ -16,6 +16,14 @@
     <header class="top"><b>Портфолио FinikFix</b><span id="who"></span><button class="btn ghost" id="new">+ Новая работа</button><button class="btn ghost" id="logout">Выйти</button></header>
     <p class="hint">Здесь можно добавлять работы, загружать фото, скрывать и менять порядок. Показываются на сайте только отмеченные «Опубликовано» и с фото.</p>
     <p class="msg" id="msg" role="status"></p>
+    <nav class="tabs"><button class="btn sm" id="tab-works" type="button">Работы</button> <button class="btn ghost sm" id="tab-reviews" type="button">Отзывы</button> <button class="btn ghost sm" id="tab-leads" type="button">Заявки</button></nav>
+    <section id="reviews-panel" hidden>
+      <p class="hint">Отзывы сайта появляются публично только после «Одобрить». Отзывы Авито импортируются отдельной командой; оценок у них нет, так как в выгрузке они не указаны.</p>
+      <label>Источник <select id="rv-src"><option value="">Все</option><option value="site">Сайт</option><option value="avito">Авито</option></select></label>
+      <label>Статус <select id="rv-st"><option value="">Все</option><option value="pending">Ждёт проверки</option><option value="approved">Опубликован</option><option value="rejected">Отклонён</option><option value="hidden">Скрыт</option></select></label>
+      <ul id="rv-list" class="list"></ul>
+    </section>
+    <section id="leads-panel" hidden><ul id="leads-list" class="list"></ul></section>
     <ul id="list" class="list"></ul>
     <dialog id="edit"><form id="edit-form" class="panel">
       <h2 id="edit-title">Работа</h2>
@@ -23,6 +31,9 @@
       <label>Категория<select name="category" required></select></label>
       <label>Что было не так<textarea name="problem" rows="3" maxlength="2000"></textarea></label>
       <label>Что сделано<textarea name="solution" rows="3" maxlength="2000"></textarea></label>
+      <label>Описание кейса<textarea name="description" rows="3" maxlength="2000"></textarea></label>
+      <label>Стоимость этой выполненной работы, ₽ (не текущий прайс; пусто — не показывать)<input name="price_rub" type="number" min="0" max="1000000" step="1"></label>
+      <label>Пометка к цене<input name="price_note" maxlength="200"></label>
       <fieldset><legend>Показ</legend>
         <label class="chk"><input type="checkbox" name="published"> Опубликовано на сайте</label>
         <label class="chk"><input type="checkbox" name="is_real" checked> Реальная работа клиента (если снять — подпись «Иллюстрация»)</label>
