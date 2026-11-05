@@ -95,7 +95,7 @@ test("внутренние ссылки и якоря не битые", () => {
     const h = readFileSync(f, "utf8");
     for (const m of h.matchAll(/href="(\/[^"#]*)(#[^"]*)?"/g)) {
       const [, path, hash] = m;
-      if (path === "/" || path.startsWith("/assets/")) { if (path.startsWith("/assets/")) assert.ok(existsSync(pub(path)), `${f}: ${path}`); }
+      if (path === "/" || path.startsWith("/assets/")) { if (path.startsWith("/assets/")) assert.ok(existsSync(pub(path.split("?")[0])), `${f}: ${path}`); }
       else assert.ok(existsSync(pub(join(path, "index.html"))), `${f}: ${path}`);
       if (hash && path !== "/" ) { /* якорь на другую страницу */ }
       const target = path === "/" || path === "" ? readFileSync(pub("index.html"), "utf8") : existsSync(pub(join(path, "index.html"))) ? readFileSync(pub(join(path, "index.html")), "utf8") : "";
@@ -210,4 +210,12 @@ test("кривые адреса не роняют сервер (400, проце�
     assert.ok(["400", "404"].includes(await raw("//x//y")));
     assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200, "сервер жив после плохих запросов");
   } finally { app.closeAllConnections?.(); app.close(); }
+});
+
+test("CSS и JS подключены с версией (иначе кэш на сутки держит старые стили)", () => {
+  for (const f of allHtml()) {
+    const h = readFileSync(f, "utf8");
+    assert.ok(!/href="\/assets\/style\.css"/.test(h) && !/src="\/assets\/app\.js"/.test(h), `${f}: без ?v=`);
+    assert.match(h, /\/assets\/style\.css\?v=[0-9a-f]{8}"/, f);
+  }
 });

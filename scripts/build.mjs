@@ -39,12 +39,16 @@ const pages = [
   ["/terms/", t.legalPage(o, "/terms/", "Пользовательское соглашение", t.termsHtml(o))],
   ["/mailing/", t.legalPage(o, "/mailing/", "Правила уведомлений и рекламных рассылок", t.mailingHtml(o))],
 ];
+// Версия CSS/JS в адресе: иначе браузер до суток показывает старые стили (Cache-Control 86400 для файлов без ?v=).
+const verOf = (f) => createHash("md5").update(readFileSync(join(root, "src/client", f))).digest("hex").slice(0, 8);
+const cssVer = verOf("style.css"), jsVer = verOf("app.js");
+const versioned = (html) => html.replaceAll('href="/assets/style.css"', `href="/assets/style.css?v=${cssVer}"`).replaceAll('src="/assets/app.js"', `src="/assets/app.js?v=${jsVer}"`);
 for (const [path, html] of pages) {
   const dir = join(out, path);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "index.html"), html);
+  writeFileSync(join(dir, "index.html"), versioned(html));
 }
-writeFileSync(join(out, "404.html"), t.legalPage(o, "/404.html", "Страница не найдена", `<p>Такой страницы нет. <a href="/">Перейти на главную</a></p>`));
+writeFileSync(join(out, "404.html"), versioned(t.legalPage(o, "/404.html", "Страница не найдена", `<p>Такой страницы нет. <a href="/">Перейти на главную</a></p>`)));
 
 const indexable = pages.filter(([p]) => !["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/"].includes(p)).map(([p]) => p);
 if (siteUrl) {
