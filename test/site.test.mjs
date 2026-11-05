@@ -129,14 +129,14 @@ test("микроскоп упоминается редко, контакты а�
   assert.ok(all.includes("Написать в MAX"));
 });
 
-test("юридические страницы в подвале открываются; текст соответствует отсутствию формы", () => {
+test("юридические страницы в подвале открываются; тексты описывают формы обратного звонка и отзыва", () => {
   const home = readFileSync(pub("index.html"), "utf8");
   for (const p of ["/privacy/", "/consent/", "/cookies/", "/terms/", "/mailing/"]) {
     assert.ok(home.includes(`href="${p}"`), p);
     assert.ok(existsSync(pub(p.slice(1) + "index.html")), p);
   }
   const priv = readFileSync(pub("privacy/index.html"), "utf8");
-  assert.match(priv, /нет формы заявки/);
+  assert.match(priv, /обратный звонок/); assert.match(priv, /Telegram Bot API/); assert.match(priv, /трансграничн/); assert.doesNotMatch(priv, /нет формы заявки/);
   assert.match(priv, /Telegram, MAX, WhatsApp/);
   for (const f of ["privacy", "consent", "terms", "mailing"]) assert.doesNotMatch(readFileSync(pub(f + "/index.html"), "utf8"), /Postbox|Яндекс\.Облако/i);
   assert.match(readFileSync(pub("mailing/index.html"), "utf8"), /не соглашаетесь получать рекламу/);
