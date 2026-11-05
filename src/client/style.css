@@ -443,3 +443,5 @@ a.work-card{display:block;text-decoration:none;color:inherit}
 .copy-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#10141b;color:var(--tx);border:1px solid var(--line2);border-radius:12px;padding:10px 16px;z-index:80;transition:opacity .2s,transform .2s}
 .copy-toast.on{opacity:1;transform:translate(-50%,0)}
 @media(max-width:700px){.copy-toast{bottom:calc(72px + env(safe-area-inset-bottom))}}
+#nav a,.dd-t{white-space:nowrap}
+@media(min-width:861px) and (max-width:1020px){#nav{gap:0}#nav a,.dd-t{padding-left:7px;padding-right:7px;font-size:14px}}
