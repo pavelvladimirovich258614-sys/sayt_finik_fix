@@ -12,7 +12,7 @@ on:
       op:
         description: "Операция"
         type: choice
-        options: [probe, net, logs, status, backup, import-dry, import-commit, tg-setup, tg-test, enable-reviews, enable-leads, test-lead, verify]
+        options: [probe, net, logs, status, backup, max-check, max-discover, max-setup, max-test, max-discover-vps, enable-reviews, enable-leads, test-lead, enable-admin, clear-telegram, verify]
         default: probe
 
 permissions:
@@ -41,10 +41,24 @@ jobs:
         run: |
           set -euo pipefail
           OP="${{ inputs.op }}"; [ -n "$OP" ] || OP="${GITHUB_REF_NAME#ops/}"
-          case "$OP" in probe|net|logs|status|backup|import-dry|import-commit|tg-setup|tg-test|enable-reviews|enable-leads|test-lead|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
+          case "$OP" in probe|net|logs|status|backup|max-check|max-discover|max-setup|max-test|max-discover-vps|enable-reviews|enable-leads|test-lead|enable-admin|clear-telegram|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
           git fetch -q origin claude/epic-hypatia-mxxztu
           git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
           echo "op=$OP" >> "$GITHUB_OUTPUT"; echo "Операция: $OP"
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.op.outputs.op == 'max-check' || steps.op.outputs.op == 'max-discover' }}
+        with:
+          node-version: 22
+
+      - name: MAX с раннера GitHub (проверка токена и поиск получателей)
+        if: ${{ steps.op.outputs.op == 'max-check' || steps.op.outputs.op == 'max-discover' }}
+        env:
+          MAX_BOT_TOKEN: ${{ secrets.MAX_BOT_TOKEN }}
+        run: |
+          set -uo pipefail
+          [ -n "$MAX_BOT_TOKEN" ] || { echo "::error::Не задан секрет MAX_BOT_TOKEN"; exit 1; }
+          case "${{ steps.op.outputs.op }}" in max-check) node scripts/max-tool.mjs me ;; max-discover) node scripts/max-tool.mjs discover ;; esac
 
       - name: SSH
         env:
@@ -60,7 +74,8 @@ jobs:
       - name: Выполнение
         env:
           OP: ${{ steps.op.outputs.op }}
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          MAX_BOT_TOKEN: ${{ secrets.MAX_BOT_TOKEN }}
+          MAX_RECIPIENT_USER_IDS: ${{ secrets.MAX_RECIPIENT_USER_IDS }}
         run: |
           set -uo pipefail
           H=/usr/local/sbin/finikfix-ops
@@ -88,7 +103,7 @@ jobs:
             net)
               # Сетевая доступность с сервера (без токена): DNS, TCP/TLS и HTTP-ответ Telegram API, MAX API и контрольных узлов.
               ssh -T finikfix 'bash -s' <<'REMOTE'
-          for h in api.telegram.org platform-api.max.ru dev.max.ru api.github.com; do
+          for h in api.telegram.org platform-api2.max.ru platform-api.max.ru dev.max.ru api.github.com; do
             echo "== $h"; echo "dns: $(getent ahosts $h | awk '{print $1}' | sort -u | tr '\n' ' ')"
             curl -sS -m 10 -o /dev/null -w "https: code=%{http_code} connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s\n" "https://$h/" 2>&1 | tail -1
           done
@@ -106,15 +121,23 @@ jobs:
               ops import-portfolio commit; ops import-reviews commit
               echo "== повторный импорт (идемпотентность):"; ops import-portfolio commit; ops import-reviews commit
               ops verify-data ;;
-            tg-setup)
+            max-setup)
               need_helper; set -e
-              [ -n "$TG_BOT_TOKEN" ] || { echo "::error::В GitHub Secrets не задан TG_BOT_TOKEN (Settings -> Secrets and variables -> Actions)"; exit 1; }
-              printf '%s' "$TG_BOT_TOKEN" | ssh -T finikfix "sudo -n $H set-secret TG_BOT_TOKEN"
-              ops set-env TG_CHAT_ID 1274132933,1831192124
+              [ -n "$MAX_BOT_TOKEN" ] || { echo "::error::В GitHub Secrets не задан MAX_BOT_TOKEN"; exit 1; }
+              [ -n "$MAX_RECIPIENT_USER_IDS" ] || { echo "::error::В GitHub Secrets не задан MAX_RECIPIENT_USER_IDS (два MAX user_id через запятую, после max-discover и вашего подтверждения)"; exit 1; }
+              printf '%s' "$MAX_BOT_TOKEN" | ssh -T finikfix "sudo -n $H set-secret MAX_BOT_TOKEN"
+              ops set-env MAX_RECIPIENT_USER_IDS "$MAX_RECIPIENT_USER_IDS"
+              ops set-env MAX_API_BASE https://platform-api2.max.ru
               ops gen-salt
-              ops tg-check
+              ops max-check   # токен проверяется с самого VPS
+              ops max-status ;;
+            max-test) need_helper; ops max-test ;;
+            max-discover-vps) need_helper; ops max-discover ;;
+            clear-telegram)
+              need_helper
+              ops max-check || { echo "::error::MAX не проверен: Telegram-настройки не удаляю"; exit 1; }
+              for k in TG_BOT_TOKEN TG_CHAT_ID TG_API_BASE; do ops unset-env $k; done
               ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix" ;;
-            tg-test) need_helper; ops tg-test ;;
             enable-reviews)
               need_helper
               restart() { ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix"; sleep 4; }
@@ -126,8 +149,9 @@ jobs:
             enable-leads)
               need_helper
               restart() { ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix"; sleep 4; }
-              # Без реально работающего Telegram приём не включается: tg-check = getMe + getChat для каждого получателя.
-              ops tg-check || { echo "::error::Telegram не проверен, формы не включены"; exit 1; }
+              # Без реальной отправки обоим получателям MAX приём не включается.
+              ops max-check || { echo "::error::MAX не проверен, формы не включены"; exit 1; }
+              ops max-test || { echo "::error::Тестовое сообщение MAX не доставлено, формы не включены"; exit 1; }
               rollback() { echo "::error::Проверка не прошла, выключаю приём заявок (LEADS_ENABLED=0)"; ops set-env LEADS_ENABLED 0; restart; exit 1; }
               ops set-env LEADS_ENABLED 1 || rollback
               ops nginx-lead open || rollback
@@ -137,7 +161,16 @@ jobs:
               [ "$(post /api/lead '{"name":"Тест","phone":"+79011112233","consent":false}' | tail -1)" = "HTTP 400" ] || rollback
               echo "приём заявок включён: невалидные запросы отклоняются (400)" ;;
             test-lead)
-              post /api/lead '{"name":"ТЕСТ FinikFix (проверка)","phone":"+79990000000","comment":"Тестовая заявка от проверки доставки. Перезванивать не нужно.","consent":true,"page":"/"}' ;;
+              post /api/lead '{"name":"ТЕСТ FinikFix (проверка)","phone":"+79990000000","comment":"Тестовая заявка от проверки доставки. Перезванивать не нужно.","consent":true,"page":"/","calc":{"device":"PlayStation","service":"Замена HDMI-порта","range":"от 2 500 ₽"}}'
+              sleep 6; have_helper && ops leads-status ;;
+            enable-admin)
+              need_helper
+              restart() { ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix"; sleep 4; }
+              ops set-env ADMIN_ENABLED 1
+              ops nginx-admin open
+              restart
+              echo "GET /admin/ -> $(curl -s -m 15 -o /dev/null -w '%{http_code}' "$SITE/admin/")"
+              echo "GET /admin/api/works без входа -> $(curl -s -m 15 -o /dev/null -w '%{http_code}' "$SITE/admin/api/works")" ;;
             verify)
               have_helper && { ops status; ops verify-data; } || echo "(помощник не установлен: серверная часть пропущена, проверяю публичную)"
               curl -fsS -m 20 "$SITE/api/portfolio" | jq '{works: (.works|length), photos: ([.works[].photos|length]|add)}'

@@ -86,6 +86,8 @@ export function openStore(dataDir) {
       if (ok) q("UPDATE lead_deliveries SET status='delivered',attempts=attempts+1,delivered_at=?,last_error='' WHERE id=?").run(now(), id);
       else { const a = q("SELECT attempts FROM lead_deliveries WHERE id=?").get(id).attempts + 1; q("UPDATE lead_deliveries SET status=?,attempts=?,last_error=?,next_try=? WHERE id=?").run(a >= 8 ? "failed" : "pending", a, String(err).slice(0, 200), nextTry, id); }
     },
+    /** Ожидающие доставки в отключённый канал Telegram не висят вечно: помечаются failed с пояснением, заявка и её история сохраняются. */
+    archiveTelegramDeliveries: () => q("UPDATE lead_deliveries SET status='failed', last_error='канал Telegram отключён (архив), заявка сохранена' WHERE channel LIKE 'telegram%' AND status='pending'").run().changes,
     recentLeadsByIp: (h, since) => q("SELECT COUNT(*) AS n FROM leads WHERE ip_hash=? AND created_at>?").get(h, since).n,
     listPublic({ category, home, slider } = {}) {
       let sql = "SELECT * FROM works WHERE published=1"; const args = [];

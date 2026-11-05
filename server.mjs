@@ -40,6 +40,8 @@ export function createApp(env = process.env, opts = {}) {
       res.writeHead(404, { ...sec, "Content-Type": "text/html; charset=utf-8" }); res.end(nf);
     }
   });
+  // Ожидающие доставки в отключённый Telegram архивируются (только когда настроен MAX).
+  if (channels.length) server.once("listening", () => { portfolio.store().then((st) => { const n = st.archiveTelegramDeliveries(); if (n) console.log(`[notify] архивировано ожидающих доставок в Telegram: ${n}`); }).catch((e) => console.error("[notify] архив:", e.message)); });
   // Повторная доставка заявок, не дошедших сразу (только если приём включён).
   if (forms.leadsOn) { const t = setInterval(async () => { try { await processDue(await portfolio.store(), channels); } catch (e) { console.error("retry error", e.message); } }, 30_000); t.unref(); server.on("close", () => clearInterval(t)); }
   return server;

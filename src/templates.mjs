@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { pairTotal } from "./pricing.mjs";
 export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
-import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos } from "./data.mjs";
+import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos, workCats } from "./data.mjs";
 import { icon, brandIcon, brandDefs } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
@@ -14,7 +14,9 @@ export function priceTable(items) {
   return `<table class="ptable">${items.map((i) => `<tr><td>${esc(i[0])}</td><td>${priceText(i)}</td></tr>`).join("")}</table>`;
 }
 
-export const portfolioBtn = (cls = "") => `<a class="btn ${cls}" href="${site.avito}" target="_blank" rel="noopener" data-goal="portfolio">${esc(site.portfolioText)}</a>`;
+export const portfolioBtn = (cls = "") => `<a class="btn ${cls}" href="/portfolio/" data-goal="portfolio">${esc(site.portfolioText)}</a>`;
+// Релевантные кейсы на странице услуги (заполняется из /api/portfolio, скрывается, если подходящих работ нет)
+export const relatedWorks = (slug) => workCats[slug] ? `<section class="alt"><div class="wrap"><span class="eyebrow">Примеры работ</span><h2>Похожие выполненные ремонты</h2><div class="works-grid works-rel" data-wcat="${workCats[slug]}" aria-live="polite"></div><p class="cat-more"><a class="btn ghost" href="/portfolio/" data-goal="portfolio">Всё портфолио</a></p></div></section>` : "";
 
 export const faqBlock = (faq) => `<div class="faq">${faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>`;
 
@@ -75,6 +77,7 @@ export function contactBtns({ wa = false, cls = "" } = {}) {
   return `<div class="cbtns${cls ? " " + cls : ""}">` +
     `<button type="button" class="cbtn cb-req" data-cb hidden>${brandIcon("call", 22)}<span>Оставить заявку</span></button>` +
     `<a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить</span></a>` +
+    `<button type="button" class="cbtn cb-copy" data-copy="${site.phoneRaw}" data-copy-label="${site.phone}" aria-label="Скопировать номер ${site.phone}"><span>Скопировать номер</span></button>` +
     (site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" ${ext}>${brandIcon("max", 24)}<span>Написать в MAX</span></a>` : "") +
     `<a class="cbtn cb-tg" href="${esc(site.telegram)}" ${ext}>${brandIcon("tg", 24)}<span>Написать в Telegram</span></a>` +
     (wa ? `<a class="cbtn cb-wa" href="${waLink}" ${ext}>${brandIcon("wa", 24)}<span>WhatsApp</span></a>` : "") + `</div>`;
@@ -105,6 +108,7 @@ export function sticksBlock() {
         <dl class="promo-res" aria-live="polite"><div><dt>Сумма</dt><dd id="pr-sum">от ${fmtRub(r.sum)}</dd></div><div><dt>Скидка ${promos.pairDiscount.percent}%</dt><dd id="pr-disc">−${fmtRub(r.discount)}</dd></div><div class="tot"><dt>Итого</dt><dd id="pr-total">от ${fmtRub(r.total)}</dd></div></dl>
       </div>
       <p class="note">Цены «от», поэтому итог тоже «от»: точную стоимость называю после бесплатной диагностики.</p>
+      <p><button type="button" class="btn" data-cb data-cb-promo hidden>Оставить заявку со скидкой ${promos.pairDiscount.percent}%</button></p>
       ${contactBtns()}
     </div>
   </div>
@@ -131,7 +135,7 @@ export function calcSection() {
   </div></section>`;
 }
 
-const navMain = [["/ceny/", "Цены"], ["/#calc", "Калькулятор"], ["/o-mastere/", "О мастере"], ["/otzyvy/", "Отзывы"], ["/kontakty/", "Контакты"]];
+const navMain = [["/ceny/", "Цены"], ["/portfolio/", "Портфолио"], ["/#calc", "Калькулятор"], ["/o-mastere/", "О мастере"], ["/otzyvy/", "Отзывы"], ["/kontakty/", "Контакты"]];
 const svcLinks = () => [...categories.map((c) => [`/${c.slug}/`, c.cat]), ...narrow.map((n) => [`/${n.slug}/`, n.h1.replace(/ в Ангарске$/, "")]), ["/vosstanovlennaya-tekhnika/", "Восстановленная техника"]];
 function navHtml(path) {
   const svc = svcLinks();
@@ -216,7 +220,7 @@ ${body}
   <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <a href="/terms/">Пользовательское соглашение</a> · <a href="/mailing/">Уведомления и рассылки</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
 <nav class="float" aria-label="Быстрая связь"><a class="fl-call" href="tel:${site.phoneRaw}" aria-label="Позвонить мастеру: ${site.phone}" data-goal="call">${brandIcon("call", 24)}</a>${site.max ? `<a class="fl-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX" data-goal="messenger">${brandIcon("max", 28)}</a>` : ""}<a class="fl-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram" data-goal="messenger">${brandIcon("tg", 28)}</a><a class="fl-wa" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp" data-goal="messenger">${brandIcon("wa", 28)}</a></nav>${mobileBar}${cbDialog}${brandDefs}
-<script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })), avito: site.avito })}</script>
+<script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })) })}</script>
 ${cookieUi(metrika)}
 <script src="/assets/app.js" defer></script>
 </body></html>`;
@@ -261,10 +265,10 @@ ${heroSlider()}
   <p class="cat-more reveal">Также: <a href="/vosstanovlennaya-tekhnika/">восстановленная техника</a> · <a href="/skupka/">скупка техники</a></p>
 </div></section>
 
-<section class="alt" id="works-home" hidden><div class="wrap">
-  <span class="eyebrow">Портфолио</span><h2>Наши работы</h2><p class="lead">Реальные ремонты из мастерской. Остальные — в полном портфолио.</p>
-  <div class="works-grid" id="works-home-grid"></div>
-  <p class="cat-more"><a class="btn" href="/portfolio/">Смотреть все работы</a></p>
+<section class="alt" id="works-home"><div class="wrap">
+  <span class="eyebrow">Портфолио</span><h2>Наши работы — реальный ремонт</h2><p class="lead">Фото и цены выполненных ремонтов: консоли, геймпады, пайка. Цены — это стоимость конкретных работ, а не текущий прайс.</p>
+  <div class="works-grid" id="works-home-grid" aria-live="polite"></div>
+  <p class="cat-more"><a class="btn" id="works-all-btn" href="/portfolio/" data-goal="portfolio">Смотреть все работы</a></p>
 </div></section>
 
 <section class="alt"><div class="wrap">
@@ -290,8 +294,8 @@ ${videoSection()}
 
 <section class="alt"><div class="wrap">
   <span class="eyebrow reveal">Доказательства</span><h2 class="reveal">Реальные работы и отзывы</h2>
-  <p class="lead reveal">Рейтинг профиля на Авито — 4,8 (62 отзыва). Реальные кейсы с фото — в портфолио на сайте.</p>
-  <div class="reveal">${portfolioBtn()}</div>
+  <p class="lead reveal">Рейтинг профиля на Авито — 4,8 (62 отзыва). Читайте отзывы клиентов и смотрите реальные кейсы с фото прямо на сайте.</p>
+  <div class="acts reveal">${portfolioBtn()}<a class="btn ghost" href="/otzyvy/">Читать отзывы</a></div>
 </div></section>
 
 ${contactSection()}
@@ -316,7 +320,8 @@ ${c.more ? `<section><div class="wrap two"><div><span class="eyebrow">Что д�
 <section class="alt"><div class="wrap two"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div>${noInternet}</div></section>
 ${c.slug === "remont-gamepadov" ? sticksBlock() : ""}
 ${contactSection()}
-<section><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(c.faq)}<div class="portfolio-row">${portfolioBtn()}</div></div></section>`;
+<section><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(c.faq)}</div></section>
+${relatedWorks(c.slug)}`;
   return layout({ ...o, path: `/${c.slug}/`, title: c.title + ` — ${site.brand}`, desc: c.desc, body, jsonld: [serviceLd(c.h1, c.desc), faqLd(c.faq)] });
 }
 
@@ -324,7 +329,8 @@ export function narrowPage(n, o) {
   const body = `${crumbs(n.h1)}
 <section class="page-hero"><div class="wrap"><span class="badge">${esc(n.cat)}</span><h1>${esc(n.h1)}</h1></div></section>
 <section><div class="wrap article">${n.sections.map(([h, t]) => `<h2 class="reveal">${esc(h)}</h2><p class="reveal">${esc(t)}</p>`).join("")}
- <p><a href="/${n.back[0]}/">${esc(n.back[1])} →</a></p><div>${portfolioBtn()}</div></div></section>
+ <p><a href="/${n.back[0]}/">${esc(n.back[1])} →</a></p></div></section>
+${relatedWorks(n.slug)}
 ${n.slug === "zamena-stika-gamepada" ? sticksBlock() : ""}
 ${contactSection()}
 <section class="alt"><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(n.faq)}</div></section>`;
@@ -355,10 +361,10 @@ export function portfolioPage(o) {
 <section><div class="wrap">
   <div class="works-filters" id="works-filters" role="group" aria-label="Категории"></div>
   <div class="works-grid" id="works-grid" aria-live="polite"></div>
-  <div id="works-empty" class="card" hidden><h3>Работы скоро появятся</h3><p>Пока смотрите фото ремонтов в моём портфолио на Авито.</p><div class="acts">${portfolioBtn()}</div></div>
-  <noscript><p class="note">Для просмотра галереи включите JavaScript или откройте <a href="${site.avito}" target="_blank" rel="noopener">портфолио на Авито</a>.</p></noscript>
+  <div id="works-empty" class="card" hidden><h3>Работы скоро появятся</h3><p>Мы добавляем фото выполненных ремонтов. Свяжитесь с мастером, и он расскажет о похожих работах.</p></div>
+  <noscript><p class="note">Для просмотра галереи включите JavaScript.</p></noscript>
 </div></section>
-<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><p class="lb-photo-status" role="status" aria-live="polite"></p><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-desc"></p><p class="lb-price"></p><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
+<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><div class="lb-thumbs" hidden></div><p class="lb-photo-status" role="status" aria-live="polite"></p><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-desc"></p><p class="lb-price"></p><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div><div class="lb-actions"><a class="btn sm" href="#contact">Связаться с мастером</a><button type="button" class="btn sm ghost" data-cb hidden>Оставить заявку</button></div></div></div></dialog>
 ${contactSection()}`;
   return layout({ ...o, path: "/portfolio/", title: "Портфолио работ — FinikFix, Ангарск", desc: "Фото выполненных ремонтов игровых консолей, геймпадов, ноутбуков и ПК в мастерской FinikFix, Ангарск.", body });
 }
@@ -366,7 +372,7 @@ ${contactSection()}`;
 export function reviewsPage(o) {
   const body = `${crumbs("Отзывы")}
 <section class="page-hero"><div class="wrap"><h1>Отзывы клиентов</h1><p class="hero-p">Отзывы с Авито и отзывы, оставленные на этом сайте, показываются отдельно. Новые отзывы с сайта публикуются только после проверки.</p>
-<div class="acts">${portfolioBtn()}<a class="btn ghost" href="${site.avitoAd}" target="_blank" rel="noopener">Объявление по смартфонам на Авито</a></div></div></section>
+<div class="acts">${portfolioBtn()}</div></div></section>
 <section><div class="wrap"><span class="eyebrow">Авито</span><h2>Отзывы на Авито</h2>
   <div class="card rv-stats"><p class="big">4,8 из 5 · 62 отзыва</p><p class="note">Источник: профиль «Ремонт цифровой техники» на Авито, данные на 5 ноября 2026: 58 оценок «5», одна «3», три «1». Это общий рейтинг профиля (в него входят и покупки). Оценки отдельных отзывов в выгрузке не указаны, поэтому ниже они не показаны. Этот рейтинг не является рейтингом сайта.</p></div>
   <div id="rv-avito" class="rv-list" aria-live="polite"></div><noscript><p class="note">Для просмотра отзывов включите JavaScript или откройте профиль на Авито.</p></noscript></div></section>

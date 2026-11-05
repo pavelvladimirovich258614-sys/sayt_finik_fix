@@ -87,8 +87,8 @@ test("помощник: фиксированные операции, нет eval
   const code = h.replace(/^\s*#.*$/gm, "");
   assert.doesNotMatch(code, /\beval\b/); assert.doesNotMatch(code, /bash -c|sh -c/);
   assert.match(h, /LOCK=\/run\//); assert.doesNotMatch(h, /\$BASE\/\.ops\.lock/);
-  assert.doesNotMatch(h, /ADMIN_ENABLED\)/, "админка этим помощником не включается");
-  assert.match(h, /\[\[ "\$v" =~ \^\[0-9\]\{6,12\}:/, "формат токена проверяется");
-  assert.match(h, /TG_CHAT_ID\) \[\[/); assert.match(h, /\*\) echo "ключ не разрешён"/);
+  assert.match(h, /REVIEWS_FORM\|LEADS_ENABLED\|ADMIN_ENABLED\)/); assert.match(h, /MAX_API_BASE\) \[\[ "\$v" =~ \^https:\/\/platform-api/, "MAX_API_BASE только на домены MAX (токен не уйдёт на чужой хост)"); assert.match(h, /разрешён только MAX_BOT_TOKEN/); assert.match(h, /TG_BOT_TOKEN\|TG_CHAT_ID\|TG_API_BASE\) ;;/);
+  assert.match(h, /\[\[ "\$v" =~ \^\[A-Za-z0-9_\.~:-\]\{16,300\}\$ \]\]/, "формат токена проверяется");
+  assert.match(h, /MAX_RECIPIENT_USER_IDS\) \[\[/); assert.match(h, /\*\) echo "ключ не разрешён"/);
   assert.match(h, /nginx -t/); assert.match(h, /restore/);
 });
