@@ -1,0 +1,37 @@
+name: Live Check FinikFix
+
+# Проверка живого сайта в Chromium (профили iPhone/Pixel/планшет/ПК), без отправки реальных заявок.
+# Запуск: Actions -> Live Check FinikFix -> Run workflow, либо push в ветку live/check (только из коммита рабочей ветки).
+on:
+  push:
+    branches: ['live/*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Только коммит рабочей ветки
+        run: |
+          git fetch -q origin claude/epic-hypatia-mxxztu
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.49.1 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          cp "$GITHUB_WORKSPACE/scripts/live-check.mjs" /tmp/pw/live-check.mjs
+      - name: Проверка сайта
+        run: cd /tmp/pw && SITE=https://finikfix.ru node live-check.mjs | tee /tmp/live.txt
+      - name: Итог
+        if: always()
+        run: grep -E '^FAIL|^ИТОГ' /tmp/live.txt || echo "нет результатов"
