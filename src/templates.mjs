@@ -235,6 +235,15 @@ const problemIcons = ["stick", "hdmi", "fan", "power", "battery"];
 const stepIcons = ["chat", "search", "tag", "shield"];
 const tools = [["meter", "Замеры напряжений"], ["chip", "Работа по схемам"], ["code", "Прошивки PS3/PS4/Switch"], ["shield", "Договор и гарантия 90 дней"]];
 
+const trustCards = [
+  ["gamepad", "Специализируюсь на игровой технике", "Починил более 500 консолей и геймпадов. Знаю типичные «болячки» PS5, Xbox Series X, Switch и DualSense — не учусь на вашем устройстве."],
+  ["shield", "Гарантия до 90 дней", "Если после ремонта проблема вернётся — переделаю бесплатно. Даю гарантию на работу и запчасти, а не «на словах»."],
+  ["tag", "Прозрачные цены без сюрпризов", "Стоимость согласовываю до начала работ. В прайсе — цены «от», финальную сумму называю после бесплатной диагностики. Никаких «доплат в конце»."],
+  ["clock", "Быстро и удобно", "Многие ремонты делаю в день обращения. Самовывоз в Ангарске или встреча в городе. По договорённости могу забрать устройство и вернуть после ремонта."],
+  ["toolbox", "Профессиональное оборудование", "Паяльная станция, термостол, микроскоп — не «ремонт на коленке». Сложные случаи (замена HDMI, BGA-пайка, чистка после жидкости) мне по плечу."],
+  ["box", "Скупка техники в любом состоянии", "Скупаю ноутбуки, консоли, геймпады и комплектующие — даже нерабочие. Оценка в день обращения, оплата наличными или переводом."],
+];
+
 export function homePage(o) {
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
   const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
@@ -244,15 +253,23 @@ ${heroSlider()}
 <div class="wrap hc-grid">
   <div class="hc-txt">
     <span class="kicker reveal"><span class="mark">ff</span> FinikFix · Ангарск · ${site.tagline}</span>
-    <h1 class="reveal">Ремонт <span class="o">консолей</span> и геймпадов в Ангарске</h1>
-    <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет. Федеральные сети консоли не берут, я чиню.</p>
-    <div class="acts reveal">${contactBtns()}</div>
+    <h1 class="reveal">Ремонт <span class="o">консолей, геймпадов, смартфонов и ноутбуков</span> в&nbsp;Ангарске и&nbsp;Иркутске<span class="h1-tail"> — бесплатная диагностика, гарантия до 90 дней</span></h1>
+    <p class="hero-p reveal">Не включается Xbox? Дрифтит стик на DualSense? Перегревается PS5? Починю за один визит — с прозрачной ценой и гарантией. Работаю с PlayStation, Xbox, Nintendo, геймпадами, ноутбуками, ПК и смартфонами.</p>
+    <div class="hero-cta reveal"><button type="button" class="cbtn cb-req" data-cb hidden>${brandIcon("call", 22)}<span>Оставить заявку</span></button><a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить: ${site.phone}</span></a></div>
+    <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт. Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники.</p>
+    <div class="hero-alt reveal" aria-label="Другие способы связи"><button type="button" class="cbtn cb-copy" data-copy="${site.phoneRaw}" data-copy-label="${site.phone}" aria-label="Скопировать номер ${site.phone}"><span>Скопировать номер</span></button>${site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("max", 22)}<span>MAX</span></a>` : ""}<a class="cbtn cb-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("tg", 22)}<span>Telegram</span></a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
     <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>рейтинг на Авито (62 отзыва)</span></li></ul>
   </div>
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
 </section>
+
+<section class="trust" id="trust"><div class="wrap">
+  <span class="eyebrow reveal">Мастер</span><h2 class="reveal">Почему мне доверяют ремонт</h2>
+  <div class="trust-grid">${trustCards.map(([ic, t, p]) => `<article class="card trust-card reveal"><span class="ico lg">${icon(ic, 32)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p></article>`).join("")}</div>
+  <p class="cat-more reveal"><a class="btn" href="#calc" data-goal="calc">Узнать стоимость ремонта</a></p>
+</div></section>
 
 <section id="services"><div class="wrap">
   <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтируем</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальную технику тоже принимаю в мастерской.</p>
@@ -307,7 +324,7 @@ ${contactSection()}
    <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
    <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
   </div></div></section>`;
-  return layout({ ...o, path: "/", title: `Ремонт консолей и геймпадов в Ангарске — ${site.brand}`, desc: "Ремонт PlayStation, Xbox, Nintendo Switch, геймпадов, ноутбуков, ПК и смартфонов в Ангарске. Диагностика бесплатно, гарантия 90 дней. Скупка техники в любом состоянии.", body });
+  return layout({ ...o, path: "/", title: `Ремонт консолей, геймпадов, смартфонов и ноутбуков в Ангарске и Иркутске — ${site.brand}`, desc: "Ремонт PlayStation, Xbox, Nintendo Switch, геймпадов, ноутбуков, ПК и смартфонов в Ангарске и Иркутске. Бесплатная диагностика при согласии на ремонт, гарантия до 90 дней, цены «от». Скупка техники.", body });
 }
 
 export function categoryPage(c, o) {
