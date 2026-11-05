@@ -6,17 +6,22 @@ export const MAX_TEXT_LIMIT = 3900; // лимит текста сообщени�
 
 export const safeBase = (v) => (/^https:\/\/platform-api[0-9]*\.max\.ru$/i.test(String(v || "").replace(/\/$/, "")) ? String(v).replace(/\/$/, "") : MAX_DEFAULT_BASE);
 
-export function maxClient({ token, base = MAX_DEFAULT_BASE, fetchImpl, timeoutMs = 8000 }) {
+export function maxClient({ token, base = MAX_DEFAULT_BASE, fetchImpl, timeoutMs = 8000, dnsRetries = 3, dnsRetryMs = 800 }) {
   fetchImpl = fetchImpl || makeHttpsFetch(); // по умолчанию: TLS с доверием к корню Минцифры только для MAX
   const scrub = (s) => (token ? String(s).split(token).join("***") : String(s));
   async function call(method, path, { query, body } = {}) {
     const qs = query ? "?" + new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== "")).toString() : "";
     let res;
-    try {
-      res = await fetchImpl(`${base}${path}${qs}`, { method, headers: { Authorization: token, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs) });
-    } catch (e) {
-      const code = e?.cause?.code || e?.name || "network";
-      const err = new Error(`max сеть: ${scrub(code)}`); err.kind = e?.name === "TimeoutError" ? "timeout" : "network"; throw err;
+    // Кратковременный сбой DNS (EAI_AGAIN) значит, что соединение ещё не установлено: запрос не ушёл, повтор безопасен и дублей не даёт.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        res = await fetchImpl(`${base}${path}${qs}`, { method, headers: { Authorization: token, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs) });
+        break;
+      } catch (e) {
+        const code = e?.cause?.code || e?.name || "network";
+        if (code === "EAI_AGAIN" && attempt < dnsRetries) { await new Promise((r) => setTimeout(r, dnsRetryMs * (attempt + 1))); continue; }
+        const err = new Error(`max сеть: ${scrub(code)}`); err.kind = e?.name === "TimeoutError" ? "timeout" : "network"; throw err;
+      }
     }
     let j = null; try { j = await res.json(); } catch {}
     if (!res.ok) {

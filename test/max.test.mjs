@@ -122,3 +122,16 @@ test("миграция: ожидающие доставки Telegram архив�
   assert.equal(after.find((x) => x.channel === "max-1").status, "pending");
   assert.ok(st.getLead(id)); assert.ok(tg2); st.close();
 });
+
+test("MAX: кратковременный сбой DNS (EAI_AGAIN) повторяется и не даёт дублей; другие сетевые ошибки не повторяются", async () => {
+  const dns = Object.assign(new Error("fetch failed"), { cause: { code: "EAI_AGAIN" } });
+  const f = recorder(dns, dns, resp(200, { message: {} }));
+  const c = maxClient({ token: TOKEN, fetchImpl: f, dnsRetryMs: 5 });
+  await c.sendToUser(1, "x");
+  assert.equal(f.calls.length, 3, "два сбоя DNS и один успешный запрос");
+  const reset = Object.assign(new Error("x"), { cause: { code: "ECONNRESET" } });
+  const g = recorder(reset, resp(200, { message: {} }));
+  await assert.rejects(maxClient({ token: TOKEN, fetchImpl: g, dnsRetryMs: 5 }).sendToUser(1, "x"), (e) => e.kind === "network");
+  assert.equal(g.calls.length, 1, "ECONNRESET не повторяем (сообщение могло уйти)");
+  const h = recorder(dns); await assert.rejects(maxClient({ token: TOKEN, fetchImpl: h, dnsRetries: 2, dnsRetryMs: 5 }).me(), /EAI_AGAIN/); assert.equal(h.calls.length, 3);
+});
