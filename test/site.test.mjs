@@ -259,3 +259,22 @@ test("MAX: везде один фирменный значок (растр 1:1) 
   }
   assert.ok(iconCount > 20);
 });
+
+test("Hero: два показателя (опыт и гарантия), рейтинг Авито в Hero и рекламных блоках главной убран", () => {
+  const h = readFileSync(pub("index.html"), "utf8");
+  const stats = h.match(/<ul class="hc-stats[\s\S]*?<\/ul>/)[0];
+  assert.equal((stats.match(/<li>/g) || []).length, 2);
+  assert.match(stats, /<b>10\+<\/b><span>лет с консолями<\/span>/); assert.match(stats, /<b>90<\/b><span>дней гарантии<\/span>/);
+  assert.ok(!/Авито|4,8|★/.test(stats));
+  const body = h.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+  assert.ok(!/Рейтинг профиля на Авито|рейтинг на Авито|4,8/.test(body), "на главной нет рекламы рейтинга Авито");
+  assert.ok(h.includes("Смотрите реальные фотографии выполненных ремонтов и читайте отзывы клиентов мастерской FinikFix."));
+  assert.ok(h.includes('href="/otzyvy/"') && h.includes("Читать отзывы"));
+});
+
+test("страница отзывов не затронута: источник Авито указан честно, рейтинг профиля показан отдельным блоком", () => {
+  const r = readFileSync(pub("otzyvy/index.html"), "utf8");
+  assert.ok(r.includes("4,8 из 5 · 62 отзыва"));
+  assert.match(r, /Отзывы на Авито/); assert.match(r, /Источник: профиль «Ремонт цифровой техники» на Авито/);
+  assert.ok(r.includes('id="rv-avito"'));
+});

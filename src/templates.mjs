@@ -268,7 +268,7 @@ ${heroSlider()}
     <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт (при отказе — 1 000 ₽, выдаю акт дефектации). Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники.</p>
     <div class="hero-alt reveal" aria-label="Другие способы связи"><button type="button" class="cbtn cb-copy" data-copy="${site.phoneRaw}" data-copy-label="${site.phone}" aria-label="Скопировать номер ${site.phone}"><span>Скопировать номер</span></button>${site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("max", 22)}<span>MAX</span></a>` : ""}<a class="cbtn cb-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("tg", 22)}<span>Telegram</span></a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
-    <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>рейтинг на Авито (62 отзыва)</span></li></ul>
+    <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li></ul>
   </div>
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
@@ -320,7 +320,7 @@ ${videoSection()}
 
 <section class="alt"><div class="wrap">
   <span class="eyebrow reveal">Доказательства</span><h2 class="reveal">Реальные работы и отзывы</h2>
-  <p class="lead reveal">Рейтинг профиля на Авито — 4,8 (62 отзыва). Читайте отзывы клиентов и смотрите реальные кейсы с фото прямо на сайте.</p>
+  <p class="lead reveal">Смотрите реальные фотографии выполненных ремонтов и читайте отзывы клиентов мастерской FinikFix.</p>
   <div class="acts reveal">${portfolioBtn()}<a class="btn ghost" href="/otzyvy/">Читать отзывы</a></div>
 </div></section>
 

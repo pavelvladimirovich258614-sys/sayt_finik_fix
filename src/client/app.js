@@ -80,7 +80,7 @@
         if (two) {
           var p = ST.pairs[i][j];
           cres.textContent = fmt(p.total); range = "итого " + fmt(p.total);
-          rows = "<div><dt>Сумма двух стиков</dt><dd>" + fmt(p.sum) + "</dd></div><div><dt>Скидка " + ST.percent + "%</dt><dd>−" + fmt(p.discount) + "</dd></div><div class=\"tot\"><dt>Итого</dt><dd>" + fmt(p.total) + "</dd></div>";
+          rows = "<div><dt>Первый стик: " + ST.types[i].short + "</dt><dd>" + fmt(ST.types[i].price) + "</dd></div><div><dt>Второй стик: " + ST.types[j].short + "</dt><dd>" + fmt(ST.types[j].price) + "</dd></div><div><dt>Сумма до скидки</dt><dd>" + fmt(p.sum) + "</dd></div><div><dt>Скидка " + ST.percent + "%</dt><dd>−" + fmt(p.discount) + "</dd></div><div class=\"tot\"><dt>Итого к оплате</dt><dd>" + fmt(p.total) + "</dd></div>";
           note = "2 стика: " + ST.types[i].short + " + " + ST.types[j].short + "; сумма " + fmt(p.sum) + ", скидка " + ST.percent + "% −" + fmt(p.discount);
           metaTxt = "Скидка " + ST.percent + "% считается от суммы двух выбранных стиков.";
         } else { range = fmt(ST.types[i].price); cres.textContent = range; note = "1 стик: " + ST.types[i].short; metaTxt = "Цена за один стик (аналог)."; }
@@ -416,7 +416,7 @@
     document.addEventListener("click", function (e) {
       var t = e.target.closest("[data-cb]"); if (!t) return;
       opener = t; calcNote = t.hasAttribute("data-cb-calc") ? chosen() : t.hasAttribute("data-cb-promo") ? promoChosen() : null;
-      cn.hidden = !calcNote; cn.textContent = calcNote ? "Ваш расчёт: " + calcNote.device + ", " + calcNote.service + (calcNote.range ? " — " + calcNote.range : "") : "";
+      cn.hidden = !calcNote; cn.textContent = calcNote ? "Ваш расчёт: " + calcNote.device + ", " + calcNote.service + (calcNote.range ? " — " + calcNote.range : "") + (calcNote.note ? ". " + calcNote.note : "") : "";
       msg.textContent = ""; msg.className = "cb-msg"; form.hidden = false;
       if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
       form.name.focus();

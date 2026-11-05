@@ -150,3 +150,9 @@ test("страницы услуг: цены из прайса, без устар
   assert.match(stick, /Original \(потенциометрический\) — 1 000 ₽/); assert.match(stick, /JCD — 1 200 ₽/);
   for (const n of narrow) assert.ok(!/от 2 500 ₽|от 1 000 ₽ за один/.test(n.desc + JSON.stringify(n.sections)), n.slug);
 });
+
+test("калькулятор: при двух стиках показываются цена каждого, сумма до скидки, скидка 15% и итог к оплате", () => {
+  const js = readFileSync(pub("assets/app.js"), "utf8");
+  for (const t of ["Первый стик: ", "Второй стик: ", "Сумма до скидки", "Итого к оплате", 'Скидка " + ST.percent']) assert.ok(js.includes(t), t);
+  assert.match(js, /calcNote\.note \? "\. " \+ calcNote\.note/, "примечание (скидка, типы стиков) видно в форме заявки");
+});
