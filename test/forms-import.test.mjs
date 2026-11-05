@@ -30,7 +30,9 @@ test("импорт: 10 кейсов, 32 фото, повторный запус�
   const av01 = st.getWorkBySource("AV-01"); assert.equal(av01.photos.length, 4); assert.equal(av01.price_rub, 4500); assert.match(av01.description, /термоинтерфейс/);
   assert.equal(st.getWorkBySource("AV-04").price_rub, 4500); assert.equal(st.getWorkBySource("AV-06").price_rub, 3000);
   assert.notEqual(st.getWorkBySource("AV-04").id, st.getWorkBySource("AV-06").id);
-  assert.doesNotMatch(JSON.stringify(pub), /24 месяца/, "гарантия 24 месяца не публикуется (на сайте везде 90 дней)");
+  const with24 = pub.filter((w) => /24 месяца/.test(JSON.stringify(w)));
+  assert.deepEqual(with24.map((w) => w.title), ["Пример пайки 3D-аналога"], "24 месяца только у AV-07 (решение владельца), с пометкой про 90 дней");
+  assert.match(with24[0].description, /90 дней/);
   st.close();
 });
 

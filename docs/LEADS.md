@@ -50,3 +50,19 @@ node --env-file=/opt/finikfix/shared/.env scripts/import-reviews.mjs --commit   
 - Нижняя панель связи (<700 px): «Позвонить», Telegram, MAX, «Заявка» (только когда приём включён), с учётом safe-area; баннер cookie поднят над ней.
 - Видеовизитка: блок на главной, пока `site.video` пустой, показывается спокойная заглушка. Положить файл и указать путь в `src/data.mjs` (`site.video`).
 - **Номер телефона:** владелец хотел и кнопку «Позвонить», и скрыть личный номер. Решения нет, номер на сайте остаётся как был (`site.phone`). Заменить на рабочий номер/переадресацию можно в одном месте `src/data.mjs`.
+
+## Обслуживание сервера через GitHub Actions (2026-11-05)
+Пользователь `deploy` не root. Чтобы импорт, секреты и nginx выполнялись из Actions без раздачи root, используется помощник `deploy/finikfix-ops` (root:root, deploy его менять не может; sudo разрешён только на него). Подкоманды фиксированные: status, backup, import-portfolio, import-reviews, set-secret (только TG_BOT_TOKEN, из stdin), set-env (белый список ключей), gen-salt, tg-check, tg-test, nginx-lead open, verify-data.
+
+**Разовые действия владельца:**
+1. На сервере от root установить помощник (просмотреть скрипт перед запуском):
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/pavelvladimirovich258614-sys/sayt_finik_fix/claude/epic-hypatia-mxxztu/deploy/install-ops-helper.sh -o /root/install-ops-helper.sh
+   less /root/install-ops-helper.sh
+   bash /root/install-ops-helper.sh
+   ```
+2. В GitHub: Settings → Secrets and variables → Actions → New repository secret `TG_BOT_TOKEN` (новый токен бота после /revoke). Значение не показывается в логах.
+3. Оба получателя (1274132933, 1831192124) нажали `/start` у @uved_nikita_bot.
+
+**Операции** (Actions → Server Ops FinikFix → Run workflow, либо push в ветку `ops/<операция>`): `probe` (без sudo), `status`, `backup`, `import-dry`, `import-commit`, `tg-setup`, `tg-test`, `enable-reviews`, `enable-leads`, `test-lead`, `verify`. Деплой: workflow «Deploy FinikFix» (вручную) либо push в ветку `release/production` (только коммит, уже входящий в `claude/epic-hypatia-mxxztu`).
+Порядок: deploy → import-dry → import-commit → tg-setup → tg-test (подтвердить получение) → enable-reviews → enable-leads → test-lead → verify. `enable-leads` не включится без успешной проверки бота (`tg-check`).

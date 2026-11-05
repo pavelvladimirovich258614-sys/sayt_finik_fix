@@ -1,0 +1,133 @@
+name: Server Ops FinikFix
+
+# Контролируемое обслуживание сервера через уже настроенный SSH-доступ (секреты FINIKFIX_SSH_KEY, FINIKFIX_KNOWN_HOSTS).
+# Запуск: Actions -> Server Ops FinikFix -> Run workflow, либо push в ветку ops/<операция> (например ops/probe).
+# Допустимы только операции из белого списка ниже; каждая либо читает состояние от пользователя deploy, либо вызывает
+# /usr/local/sbin/finikfix-ops (его ставит root один раз, deploy его изменить не может). Произвольных команд нет.
+on:
+  push:
+    branches: ['ops/*']
+  workflow_dispatch:
+    inputs:
+      op:
+        description: "Операция"
+        type: choice
+        options: [probe, status, backup, import-dry, import-commit, tg-setup, tg-test, enable-reviews, enable-leads, test-lead, verify]
+        default: probe
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finikfix-ops
+  cancel-in-progress: false
+
+env:
+  FINIKFIX_HOST: 194.34.239.218
+  FINIKFIX_USER: deploy
+  SITE: https://finikfix.ru
+
+jobs:
+  ops:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Операция и ограничения
+        id: op
+        run: |
+          set -euo pipefail
+          OP="${{ inputs.op }}"; [ -n "$OP" ] || OP="${GITHUB_REF_NAME#ops/}"
+          case "$OP" in probe|status|backup|import-dry|import-commit|tg-setup|tg-test|enable-reviews|enable-leads|test-lead|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
+          git fetch -q origin claude/epic-hypatia-mxxztu
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
+          echo "op=$OP" >> "$GITHUB_OUTPUT"; echo "Операция: $OP"
+
+      - name: SSH
+        env:
+          SSH_KEY: ${{ secrets.FINIKFIX_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FINIKFIX_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/finikfix_key; chmod 600 ~/.ssh/finikfix_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host finikfix\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/finikfix_key\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/.ssh/known_hosts\n  ServerAliveInterval 15\n' "$FINIKFIX_HOST" "$FINIKFIX_USER" > ~/.ssh/config
+
+      - name: Выполнение
+        env:
+          OP: ${{ steps.op.outputs.op }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        run: |
+          set -uo pipefail
+          H=/usr/local/sbin/finikfix-ops
+          ops() { ssh -T finikfix "sudo -n $H $*"; }
+          have_helper() { ssh -T finikfix "test -x $H && sudo -n -l $H >/dev/null 2>&1"; }
+          need_helper() { have_helper || { echo "::error::Помощник $H не установлен на сервере. Один раз от root: bash deploy/install-ops-helper.sh (см. docs/LEADS.md)"; exit 3; }; }
+          post() { curl -s -m 20 -w '\nHTTP %{http_code}\n' -X POST -H 'Content-Type: application/json' -H "Origin: $SITE" -d "$2" "$SITE$1"; }
+          case "$OP" in
+            probe)
+              ssh -T finikfix 'bash -s' <<'REMOTE'
+              echo "== whoami: $(id)"
+              echo "== sudo:"; sudo -n -l 2>&1 | sed -n 1,15p
+              echo "== helper: $(test -x /usr/local/sbin/finikfix-ops && echo установлен || echo НЕ установлен)"
+              echo "== current: $(readlink -f /opt/finikfix/current)  sha: $(cat /opt/finikfix/current/.release-sha 2>/dev/null)"
+              echo "== releases:"; ls -1t /opt/finikfix/releases | head -6
+              echo "== /opt/finikfix:"; ls -la /opt/finikfix | head -20
+              echo "== shared:"; ls -la /opt/finikfix/shared 2>&1 | head -12
+              echo "== data (может быть недоступно deploy):"; ls -la /opt/finikfix/shared/data 2>&1 | head -12
+              echo "== сервис: $(systemctl is-active finikfix) / nginx: $(systemctl is-active nginx)"
+              echo "== nginx server_name/listen/блок lead:"; grep -rhnE "server_name|listen|location = /api/lead|ssl_certificate " /etc/nginx/sites-enabled/ 2>&1 | head -20
+              echo "== letsencrypt: $(ls /etc/letsencrypt/live 2>&1 | tr '\n' ' ')"
+              echo "== node: $(node -v)"; echo "== порты:"; ss -ltn | awk 'NR==1||/:(80|443|3000|22) /'
+          REMOTE
+              ;;
+            status) need_helper; ops status ;;
+            backup) need_helper; ops backup ;;
+            import-dry) need_helper; ops import-portfolio dry; ops import-reviews dry ;;
+            import-commit)
+              need_helper; set -e
+              ops backup
+              ops import-portfolio commit; ops import-reviews commit
+              echo "== повторный импорт (идемпотентность):"; ops import-portfolio commit; ops import-reviews commit
+              ops verify-data ;;
+            tg-setup)
+              need_helper; set -e
+              [ -n "$TG_BOT_TOKEN" ] || { echo "::error::В GitHub Secrets не задан TG_BOT_TOKEN (Settings -> Secrets and variables -> Actions)"; exit 1; }
+              printf '%s' "$TG_BOT_TOKEN" | ssh -T finikfix "sudo -n $H set-secret TG_BOT_TOKEN"
+              ops set-env TG_CHAT_ID 1274132933,1831192124
+              ops gen-salt
+              ops tg-check
+              ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix" ;;
+            tg-test) need_helper; ops tg-test ;;
+            enable-reviews)
+              need_helper; set -e
+              ops gen-salt; ops set-env REVIEWS_FORM 1
+              ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix"; sleep 4
+              curl -fsS -m 15 "$SITE/api/config"; echo
+              post /api/reviews '{}' ;;
+            enable-leads)
+              need_helper; set -e
+              ops tg-check   # без рабочего токена и получателей приём не включается
+              ops set-env LEADS_ENABLED 1
+              ops nginx-lead open
+              ssh -T finikfix "sudo -n /usr/bin/systemctl restart finikfix"; sleep 4
+              curl -fsS -m 15 "$SITE/api/config"; echo
+              post /api/lead '{}'; post /api/lead '{"name":"Тест","phone":"+79011112233","consent":false}' ;;
+            test-lead)
+              post /api/lead '{"name":"ТЕСТ FinikFix (проверка)","phone":"+79990000000","comment":"Тестовая заявка от проверки доставки. Перезванивать не нужно.","consent":true,"page":"/"}' ;;
+            verify)
+              need_helper; ops status; ops verify-data
+              curl -fsS -m 20 "$SITE/api/portfolio" | jq '{works: (.works|length), photos: ([.works[].photos|length]|add)}'
+              n=0; bad=0
+              for u in $(curl -fsS -m 20 "$SITE/api/portfolio" | jq -r '.works[].photos[].src'); do n=$((n+1)); c=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$SITE$u"); [ "$c" = 200 ] || { bad=$((bad+1)); echo "битый: $u $c"; }; done
+              echo "фото проверено: $n, недоступно: $bad"
+              curl -fsS -m 20 "$SITE/api/reviews" | jq '{avito: (.avito|length), site: .siteCount, stats: .avitoStats}' ;;
+          esac
+
+      - name: Удаление ключа
+        if: always()
+        run: rm -f ~/.ssh/finikfix_key ~/.ssh/known_hosts ~/.ssh/config
