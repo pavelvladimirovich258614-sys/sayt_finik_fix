@@ -20,7 +20,8 @@ export function createApp(env = process.env, opts = {}) {
   const channels = opts.channels || channelsFromEnv(env);
   const forms = createForms(env, portfolio.store, channels);
   const server = createServer(async (req, res) => {
-    const url = new URL(req.url, "http://x");
+    // Некорректные адреса (например «//host%2f..») не должны ронять процесс: new URL бросает ошибку.
+    let url; try { url = new URL(req.url, "http://x"); } catch { res.writeHead(400, { "X-Content-Type-Options": "nosniff" }); return res.end(); }
     try { if (await portfolio.handle(req, res, url)) return; } catch (e) { console.error("portfolio error", e.message); if (!res.headersSent) { res.writeHead(500, { "Content-Type": "application/json" }); } return res.end('{"ok":false}'); }
     try { if (await forms.handle(req, res, url)) return; } catch (e) { console.error("forms error", e.message); if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" }); return res.end('{"ok":false}'); }
     const sec = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY" };
