@@ -61,15 +61,13 @@ test("скидка 15% на два аналога: арифметика", () => 
   assert.deepEqual(pairTotal(1000, 1000), { sum: 2000, total: 1700, discount: 300 });
 });
 
-test("стики: цена за один аналог от 1 000, единица указана, старой «от 1 800» нет", () => {
+test("стики: цена за один аналог фиксированная, единица указана, типы по прайсу Никиты", () => {
   const h = readFileSync(pub("zamena-stika-gamepada/index.html"), "utf8");
   assert.match(h, /за один аналог/);
-  assert.match(h, /от 1[\s\u00a0]000/);
-  assert.match(h, /−450|-450/);
-  for (const k of ["Alps", "JCD", "Vortengle", "K-silver", "Gulikit"]) assert.ok(h.includes(k), k);
+  assert.match(h, /−525|-525/);
+  for (const k of ["Original", "JCD", "Hall", "TMR K-Silver", "Gulikit"]) assert.ok(h.includes(k), k);
+  for (const old of ["Alps", "Vortengle", "K-silver"]) assert.ok(!h.includes(old), old);
   assert.ok(!/не подтвержд/i.test(h));
-  const prices = readFileSync(pub("ceny/index.html"), "utf8");
-  assert.ok(!/Замена стиков[^<]*1[\s\u00a0]800/.test(prices));
 });
 
 test("бесплатная чистка геймпада: только на страницах геймпадов и стиков", () => {
@@ -229,7 +227,7 @@ test("главная: новый H1, подзаголовок, две основ
   const cta = h.match(/<div class="hero-cta[\s\S]*?<\/div>/)[0];
   assert.match(cta, /<button[^>]*data-cb[^>]*>[\s\S]*Оставить заявку/);
   assert.match(cta, /href="tel:\+79016624589"[\s\S]*Позвонить: \+7 \(901\) 662-45-89/);
-  assert.ok(h.includes("Бесплатная диагностика при согласии на ремонт. Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники."));
+  assert.ok(h.includes("Бесплатная диагностика при согласии на ремонт (при отказе — 1 000 ₽, выдаю акт дефектации). Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники."));
   assert.match(h, /<title>Ремонт консолей, геймпадов, смартфонов и ноутбуков в Ангарске и Иркутске/);
 });
 

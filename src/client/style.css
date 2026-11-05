@@ -483,3 +483,19 @@ a.work-card{display:block;text-decoration:none;color:inherit}
 .max-pill{display:inline-flex;align-items:center;vertical-align:middle;background:#fff;border-radius:9px;padding:4px 9px;line-height:0;text-decoration:none}
 .max-pill .max-logo{display:block;height:22px;width:auto}
 .max-pill:hover{box-shadow:0 0 0 2px rgba(106,123,255,.55)}
+
+/* v14: калькулятор по прайсу Никиты (модель, стики, итог, примечания) */
+.calc{max-width:680px}
+.calc input[type=text]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:#0e131b;color:var(--tx);font:inherit;font-size:16px}
+.calc [hidden]{display:none!important}
+.calc .res{font-size:clamp(22px,5.4vw,30px);line-height:1.25;margin:20px 0 10px}
+.calc-lines{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 12px}
+.calc-lines div{background:rgba(11,13,18,.7);border:1px solid var(--line2);border-radius:14px;padding:10px 14px}
+.calc-lines dt{font-size:12px;color:var(--mut)}.calc-lines dd{margin:2px 0 0;font-weight:800}
+.calc-lines .tot{border-color:var(--ac);background:rgba(255,122,26,.12)}.calc-lines .tot dd{color:var(--ac2)}
+.calc #c-meta:not(:empty){color:var(--tx);font-weight:600}
+.calc .diag-note{margin:10px 0 16px;padding:10px 14px;border-left:3px solid var(--ac);background:rgba(255,122,26,.06);border-radius:0 10px 10px 0}
+.pnote{display:block;margin-top:4px;font-size:13px;font-weight:400;color:var(--mut)}
+.ptable td:last-child{white-space:normal;min-width:150px}
+@media(max-width:700px){.calc-lines{grid-template-columns:1fr}.ptable td{padding:11px 12px}}
+@media(max-width:480px){.ptable,.ptable tbody,.ptable tr,.ptable td{display:block;width:100%}.ptable tr{padding:10px 0;border-bottom:1px solid var(--line)}.ptable tr:last-child{border:0}.ptable td{border:0!important;padding:3px 14px!important;text-align:left!important;min-width:0!important;overflow-wrap:anywhere}.ptable td:last-child{color:var(--ac2)}}

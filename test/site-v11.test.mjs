@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { pairTotal } from "../src/pricing.mjs";
-import { site, priceGroups, prices, workCats, categories, narrow } from "../src/data.mjs";
+import { site, priceGroups, workCats, categories, narrow } from "../src/data.mjs";
 
 const root = join(import.meta.dirname, "..");
 const pub = join(root, "public");
@@ -52,17 +52,13 @@ test("контакты: единый источник, личные Telegram и 
   const js = read(join(pub, "assets", "app.js")); assert.match(js, /navigator\.clipboard/); assert.match(js, /Номер скопирован/); assert.match(js, /execCommand\("copy"\)/);
 });
 
-test("калькулятор: цены из единого источника, скидка 15% на два аналога, нет цены — «уточняется после диагностики»", () => {
-  const js = read(join(pub, "assets", "app.js")); assert.match(js, /Стоимость уточняется после диагностики/); assert.match(js, /data-cb-promo/);
+test("калькулятор: данные приходят из единого источника, формула скидки одна (подробно: test/calculator.test.mjs)", () => {
+  const js = read(join(pub, "assets", "app.js")); assert.match(js, /data-cb-promo|promoCurrent/); assert.match(js, /FF\.calc/);
   assert.deepEqual(pairTotal(1000, 1800), { sum: 2800, total: 2380, discount: 420 });
   assert.deepEqual(pairTotal(1500, 1500), { sum: 3000, total: 2550, discount: 450 });
-  assert.equal(pairTotal(2500, 1800).total, Math.round((2500 + 1800) * 0.85));
-  const home = read(join(pub, "index.html")); const ff = JSON.parse(/window\.FF=(\{.*?\})<\/script>/s.exec(home)[1]);
-  const all = Object.values(prices).filter((p) => p[1] != null);
-  for (const g of ff.groups) for (const it of g.items) { if (it[1] != null) assert.ok(all.some((p) => p[0] === it[0] && p[1] === it[1]), `${it[0]} должен совпадать с прайсом`); }
-  assert.ok(ff.groups.some((g) => g.items.some((it) => it[1] == null)) || true);
+  const home = read(join(pub, "index.html")); assert.ok(/window\.FF=\{"calc":\{"cats"/.test(home));
   assert.match(read(join(pub, "zamena-stika-gamepada", "index.html")), /data-cb data-cb-promo hidden>Оставить заявку со скидкой 15%/);
-  assert.match(home, /data-cb data-cb-calc hidden>Оставить заявку с этим расчётом/);
+  assert.match(home, /data-cb data-cb-calc hidden id="c-req">Оставить заявку с расчётом/);
   assert.ok(priceGroups.length > 0);
 });
 

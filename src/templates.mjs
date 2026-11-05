@@ -2,16 +2,16 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { pairTotal } from "./pricing.mjs";
 export { privacyHtml, consentHtml, cookiesHtml, termsHtml, mailingHtml } from "./legal.mjs";
-import { site, prices, priceGroups, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos, workCats } from "./data.mjs";
+import { site, shop, categories, narrow, pagesOther, heroSlides, homeCats, stickTypes, stickTech, stickUnit, promos, workCats, diagnostics, priceNote } from "./data.mjs";
+import { priceRows, priceGroupRows, buildCalc } from "./calc.mjs";
 import { icon, brandIcon, maxLogoImg } from "./icons.mjs";
 
 export const rub = (n) => n.toLocaleString("ru-RU").replace(/ | /g, " ") + " ₽";
-export const priceText = ([, p, fixed]) => (p == null ? "по запросу" : (fixed ? "" : "от ") + rub(p));
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const waLink = `${site.whatsapp}?text=${encodeURIComponent(site.preset)}`;
 
-export function priceTable(items) {
-  return `<table class="ptable">${items.map((i) => `<tr><td>${esc(i[0])}</td><td>${priceText(i)}</td></tr>`).join("")}</table>`;
+export function priceTable(rows) {
+  return `<table class="ptable">${rows.map((r) => `<tr><td>${esc(r.name)}${r.note ? `<small class="pnote">${esc(r.note)}</small>` : ""}</td><td>${r.lines.map(esc).join("<br>")}</td></tr>`).join("")}</table>`;
 }
 
 export const portfolioBtn = (cls = "") => `<a class="btn ${cls}" href="/portfolio/" data-goal="portfolio">${esc(site.portfolioText)}</a>`;
@@ -88,14 +88,14 @@ const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
 const fmtRub = (n) => rub(n);
 export function sticksBlock() {
   const opts = stickTypes.map((t) => [t.name, t.price]);
-  const defA = 1, defB = 1; // по умолчанию два JCD: пример заказчика 1 500 + 1 500 = 3 000, скидка 450, итого 2 550
+  const defA = 0, defB = 4; // по умолчанию Original + Gulikit: 1 000 + 2 500 = 3 500, скидка 525, итого 2 975
   const r = pairTotal(opts[defA][1], opts[defB][1]);
-  const options = (sel) => opts.map(([n, pr], i) => `<option value="${pr}"${i === sel ? " selected" : ""}>${esc(n)} — от ${fmtRub(pr)}</option>`).join("");
+  const options = (sel) => opts.map(([n, pr], i) => `<option value="${i}"${i === sel ? " selected" : ""}>${esc(n)} — ${fmtRub(pr)}</option>`).join("");
   return `<section class="alt" id="sticks"><div class="wrap">
   <span class="eyebrow reveal">Замена стиков</span><h2 class="reveal">Какие стики я ставлю</h2>
   <p class="lead reveal">Подберу вариант под ваш геймпад и бюджет. Цена указана <b>${stickUnit}</b>.</p>
   <div class="stick-tech">${Object.values(stickTech).map((t) => `<div class="card reveal"><span class="ico">${icon("stick", 26)}</span><span class="tag-s">${esc(t.tag)}</span><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`).join("")}</div>
-  <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">от ${rub(t.price)}</p><span class="unit">${stickUnit}</span></div>`).join("")}</div>
+  <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">${rub(t.price)}</p><span class="unit">${stickUnit}</span></div>`).join("")}</div>
   <div class="promo reveal" id="promo" data-discount="${promos.pairDiscount.percent}">
     <div class="promo-badge" aria-hidden="true">−${promos.pairDiscount.percent}%</div>
     <div class="promo-body">
@@ -105,22 +105,22 @@ export function sticksBlock() {
       <div class="promo-calc">
         <label>Первый аналог<select id="pr-a">${options(defA)}</select></label>
         <label>Второй аналог<select id="pr-b">${options(defB)}</select></label>
-        <dl class="promo-res" aria-live="polite"><div><dt>Сумма</dt><dd id="pr-sum">от ${fmtRub(r.sum)}</dd></div><div><dt>Скидка ${promos.pairDiscount.percent}%</dt><dd id="pr-disc">−${fmtRub(r.discount)}</dd></div><div class="tot"><dt>Итого</dt><dd id="pr-total">от ${fmtRub(r.total)}</dd></div></dl>
+        <dl class="promo-res" aria-live="polite"><div><dt>Сумма</dt><dd id="pr-sum">${fmtRub(r.sum)}</dd></div><div><dt>Скидка ${promos.pairDiscount.percent}%</dt><dd id="pr-disc">−${fmtRub(r.discount)}</dd></div><div class="tot"><dt>Итого</dt><dd id="pr-total">${fmtRub(r.total)}</dd></div></dl>
       </div>
-      <p class="note">Цены «от», поэтому итог тоже «от»: точную стоимость называю после бесплатной диагностики.</p>
+      <p class="note">Скидка считается от суммы двух выбранных стиков (типы могут быть разными). ${esc(diagnostics.short)}</p>
       <p><button type="button" class="btn" data-cb data-cb-promo hidden>Оставить заявку со скидкой ${promos.pairDiscount.percent}%</button></p>
       ${contactBtns()}
     </div>
   </div>
   <p class="free-clean reveal">${icon("shield", 22)}<span><b>Бесплатная внутренняя чистка.</b> ${esc(promos.freeCleaning.text)}</span></p>
-  <p class="note reveal">Цены «от», не являются публичной офертой. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
+  <p class="note reveal">Цены не являются публичной офертой. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
 </div></section>`;
 }
 
 export function contactSection(title = "Связаться со мной") {
   return `<section id="contact" class="alt"><div class="wrap two">
   <div class="reveal"><span class="eyebrow">Связь</span><h2>${esc(title)}</h2>
-  <p class="lead">Позвоните или напишите в мессенджер в рабочее время (${site.hours}): подскажу по цене и срокам. Диагностика бесплатная.</p>
+  <p class="lead">Позвоните или напишите в мессенджер в рабочее время (${site.hours}): подскажу по цене и срокам. ${esc(diagnostics.short)}</p>
   <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li></ul>
   <p class="note">Не настраиваю интернет на дому.</p></div>
   <div class="reveal">${contactBtns({ cls: "stack" })}</div>
@@ -129,9 +129,18 @@ export function contactSection(title = "Связаться со мной") {
 
 export function calcSection() {
   return `<section id="calc"><div class="wrap">
-  <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">Сколько это примерно стоит</h2><p class="lead reveal">Выберите устройство и услугу — получите ориентир. Точная стоимость — после бесплатной диагностики.</p>
-  <div class="calc reveal" id="calc-box"><label for="c-dev">Устройство</label><select id="c-dev"></select><label for="c-srv">Услуга</label><select id="c-srv"></select>
-  <div class="res" id="c-res" aria-live="polite"></div><button type="button" class="btn" data-cb data-cb-calc hidden>Оставить заявку с этим расчётом</button><p class="note">Позвоните или напишите, чтобы уточнить цену:</p>${contactBtns({ cls: "stack" })}</div>
+  <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">Сколько стоит ремонт</h2><p class="lead reveal">Выберите, что ремонтируем, модель и услугу. Цены фиксированные; где объём работ неизвестен, цену называю после диагностики.</p>
+  <div class="calc reveal" id="calc-box">
+  <label for="c-cat">Что ремонтируем</label><select id="c-cat"></select>
+  <div id="c-model-row"><label for="c-model" id="c-model-l">Модель</label><select id="c-model"></select></div>
+  <label for="c-srv">Услуга</label><select id="c-srv"></select>
+  <div id="c-stick" hidden><label for="c-st1">Тип стика</label><select id="c-st1"></select><label for="c-qty">Сколько стиков меняем</label><select id="c-qty"><option value="1">1 стик</option><option value="2">2 стика (скидка ${promos.pairDiscount.percent}%)</option></select><div id="c-st2row" hidden><label for="c-st2">Тип второго стика</label><select id="c-st2"></select></div></div>
+  <div id="c-lap" hidden><label for="c-lapm">Модель ноутбука</label><input id="c-lapm" type="text" maxlength="60" autocomplete="off" placeholder="Например: ASUS TUF F15 FX506"></div>
+  <div class="res" id="c-res" aria-live="polite"></div>
+  <dl class="calc-lines" id="c-lines" hidden></dl>
+  <p class="note" id="c-meta"></p>
+  <p class="note diag-note"><b>${esc(diagnostics.short)}</b></p>
+  <button type="button" class="btn" data-cb data-cb-calc hidden id="c-req">Оставить заявку с расчётом</button><p class="note">Или позвоните и напишите, чтобы уточнить:</p>${contactBtns({ cls: "stack" })}</div>
   </div></section>`;
 }
 
@@ -220,7 +229,7 @@ ${body}
   <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <a href="/terms/">Пользовательское соглашение</a> · <a href="/mailing/">Уведомления и рассылки</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
 <nav class="float" aria-label="Быстрая связь"><a class="fl-call" href="tel:${site.phoneRaw}" aria-label="Позвонить мастеру: ${site.phone}" data-goal="call">${brandIcon("call", 24)}</a>${site.max ? `<a class="fl-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX" data-goal="messenger">${brandIcon("max", 28)}</a>` : ""}<a class="fl-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram" data-goal="messenger">${brandIcon("tg", 28)}</a><a class="fl-wa" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp" data-goal="messenger">${brandIcon("wa", 28)}</a></nav>${mobileBar}${cbDialog}
-<script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })) })}</script>
+<script>window.FF=${JSON.stringify({ calc: buildCalc() }).replace(/</g, "\\u003c")}</script>
 ${cookieUi(metrika)}
 <script src="/assets/app.js" defer></script>
 </body></html>`;
@@ -228,7 +237,7 @@ ${cookieUi(metrika)}
 
 const crumbs = (cur) => `<nav class="crumbs wrap" aria-label="Навигация"><a href="/">Главная</a> / <span>${esc(cur)}</span></nav>`;
 const faqLd = (faq) => ({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
-const stickServiceLd = (name, desc) => ({ ...serviceLd(name, desc), offers: { "@type": "AggregateOffer", priceCurrency: "RUB", lowPrice: Math.min(...stickTypes.map((t) => t.price)), highPrice: Math.max(...stickTypes.map((t) => t.price)), offerCount: stickTypes.length, description: `Цена за один аналог (стик), от. ${promos.pairDiscount.text}` } });
+const stickServiceLd = (name, desc) => ({ ...serviceLd(name, desc), offers: { "@type": "AggregateOffer", priceCurrency: "RUB", lowPrice: Math.min(...stickTypes.map((t) => t.price)), highPrice: Math.max(...stickTypes.map((t) => t.price)), offerCount: stickTypes.length, description: `Цена за один аналог (стик). ${promos.pairDiscount.text}` } });
 const serviceLd = (name, desc) => ({ "@context": "https://schema.org", "@type": "Service", name, description: desc, provider: { "@type": "LocalBusiness", name: site.brand, telephone: site.phoneRaw }, areaServed: site.city });
 
 const problemIcons = ["stick", "hdmi", "fan", "power", "battery"];
@@ -238,15 +247,15 @@ const tools = [["meter", "Замеры напряжений"], ["chip", "Раб�
 const trustCards = [
   ["gamepad", "Специализируюсь на игровой технике", "Починил более 500 консолей и геймпадов. Знаю типичные «болячки» PS5, Xbox Series X, Switch и DualSense — не учусь на вашем устройстве."],
   ["shield", "Гарантия до 90 дней", "Если после ремонта проблема вернётся — переделаю бесплатно. Даю гарантию на работу и запчасти, а не «на словах»."],
-  ["tag", "Прозрачные цены без сюрпризов", "Стоимость согласовываю до начала работ. В прайсе — цены «от», финальную сумму называю после бесплатной диагностики. Никаких «доплат в конце»."],
+  ["tag", "Прозрачные цены без сюрпризов", "Стоимость согласовываю до начала работ. Стандартные работы — по фиксированному прайсу, сложный ремонт — после диагностики. Никаких «доплат в конце»."],
   ["clock", "Быстро и удобно", "Многие ремонты делаю в день обращения. Самовывоз в Ангарске или встреча в городе. По договорённости могу забрать устройство и вернуть после ремонта."],
   ["toolbox", "Профессиональное оборудование", "Паяльная станция, термостол, микроскоп — не «ремонт на коленке». Сложные случаи (замена HDMI, BGA-пайка, чистка после жидкости) мне по плечу."],
   ["box", "Скупка техники в любом состоянии", "Скупаю ноутбуки, консоли, геймпады и комплектующие — даже нерабочие. Оценка в день обращения, оплата наличными или переводом."],
 ];
 
 export function homePage(o) {
-  const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена от 2 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Чистка системы охлаждения от 1 200 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание, чип управления питанием, плату."], ["/remont-gamepadov/", "Не заряжается", "Порт Micro-USB от 1 500 ₽, аккумулятор геймпада от 2 000 ₽."]];
-  const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Бесплатная диагностика", "Находим причину неисправности."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
+  const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена: PS4 и Xbox One — 4 500 ₽, PS5 — 6 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Обслуживание системы охлаждения: PS4 — 3 500 ₽, PS5 — 4 000 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание и плату. Стоимость ремонта — после диагностики."], ["/remont-gamepadov/", "Не заряжается", "Замена аккумулятора геймпада — 2 000 ₽ (аккумулятор входит в цену)."]];
+  const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Диагностика", "Находим причину. Бесплатно, если вы соглашаетесь на ремонт; при отказе — 1 000 ₽ и акт дефектации."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
 <section class="hero hero-c hs"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
 ${heroSlider()}
@@ -256,7 +265,7 @@ ${heroSlider()}
     <h1 class="reveal">Ремонт <span class="o">консолей, геймпадов, смартфонов и ноутбуков</span> в&nbsp;Ангарске и&nbsp;Иркутске<span class="h1-tail"> — бесплатная диагностика, гарантия до 90 дней</span></h1>
     <p class="hero-p reveal">Не включается Xbox? Дрифтит стик на DualSense? Перегревается PS5? Починю за один визит — с прозрачной ценой и гарантией. Работаю с PlayStation, Xbox, Nintendo, геймпадами, ноутбуками, ПК и смартфонами.</p>
     <div class="hero-cta reveal"><button type="button" class="cbtn cb-req" data-cb hidden>${brandIcon("call", 22)}<span>Оставить заявку</span></button><a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить: ${site.phone}</span></a></div>
-    <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт. Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники.</p>
+    <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт (при отказе — 1 000 ₽, выдаю акт дефектации). Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники.</p>
     <div class="hero-alt reveal" aria-label="Другие способы связи"><button type="button" class="cbtn cb-copy" data-copy="${site.phoneRaw}" data-copy-label="${site.phone}" aria-label="Скопировать номер ${site.phone}"><span>Скопировать номер</span></button>${site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("max", 22)}<span>MAX</span></a>` : ""}<a class="cbtn cb-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("tg", 22)}<span>Telegram</span></a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
     <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>рейтинг на Авито (62 отзыва)</span></li></ul>
@@ -289,7 +298,7 @@ ${heroSlider()}
 </div></section>
 
 <section class="alt"><div class="wrap">
-  <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Позвоните или напишите — цену назову после бесплатной диагностики.</p>
+  <span class="eyebrow reveal">Симптомы</span><h2 class="reveal">Частые проблемы</h2><p class="lead reveal">Узнали свою? Позвоните или напишите — всё посчитаем в калькуляторе или после диагностики.</p>
   <div class="grid five">${problems.map(([h, t, p], i) => `<a class="card tile prob reveal" href="${h}"><span class="ico lg">${icon(problemIcons[i], 34)}</span><h3>${esc(t)}</h3><p>${esc(p).replace(/(\d) (\d)/g, "$1\u00a0$2").replace(/ ₽/g, "\u00a0₽")}</p><span class="more">Подробнее →</span></a>`).join("")}</div>
 </div></section>
 
@@ -324,15 +333,15 @@ ${contactSection()}
    <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
    <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
   </div></div></section>`;
-  return layout({ ...o, path: "/", title: `Ремонт консолей, геймпадов, смартфонов и ноутбуков в Ангарске и Иркутске — ${site.brand}`, desc: "Ремонт PlayStation, Xbox, Nintendo Switch, геймпадов, ноутбуков, ПК и смартфонов в Ангарске и Иркутске. Бесплатная диагностика при согласии на ремонт, гарантия до 90 дней, цены «от». Скупка техники.", body });
+  return layout({ ...o, path: "/", title: `Ремонт консолей, геймпадов, смартфонов и ноутбуков в Ангарске и Иркутске — ${site.brand}`, desc: "Ремонт PlayStation, Xbox, Nintendo Switch, геймпадов, ноутбуков, ПК и смартфонов в Ангарске и Иркутске. Диагностика бесплатна при согласии на ремонт (1 000 ₽ при отказе), гарантия до 90 дней, фиксированные цены. Скупка техники.", body });
 }
 
 export function categoryPage(c, o) {
-  const items = c.items.map((k) => prices[k]);
+  const items = priceRows(c.items, c.fam);
   const body = `${crumbs(c.cat)}
 <section class="page-hero"><div class="wrap"><span class="badge">${esc(c.cat)}</span><h1>${esc(c.h1)}</h1><p class="hero-p">${esc(c.intro)}</p>
  ${contactBtns()}</div></section>
-${c.noprices ? "" : `<section><div class="wrap"><span class="eyebrow">Цены</span><h2>Услуги и цены</h2>${priceTable(items)}<p class="note">${c.slug === "remont-smartfonov" ? "Минимальный заказ — 500 ₽. Диагностика бесплатна при ремонте. " : "Точная стоимость — после бесплатной диагностики. "}Цены «от» не являются публичной офертой.</p></div></section>`}
+${c.noprices ? "" : `<section><div class="wrap"><span class="eyebrow">Цены</span><h2>Услуги и цены</h2>${priceTable(items)}<p class="note">${c.priceNote ? esc(c.priceNote) + " " : ""}${esc(priceNote)}</p></div></section>`}
 ${c.more ? `<section><div class="wrap two"><div><span class="eyebrow">Что делаю</span><h2>Что ещё ремонтирую</h2><ul class="ticks">${c.more.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.devices ? `<p class="note">${esc(c.devices)}</p>` : ""}</div><div><span class="eyebrow">Как всё устроено</span><h2>Порядок работы</h2><div class="grid one steps">${c.process.map(([h, p]) => `<div class="card reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("")}</div></div></div></section>` : ""}
 <section class="alt"><div class="wrap two"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div>${noInternet}</div></section>
 ${c.slug === "remont-gamepadov" ? sticksBlock() : ""}
@@ -356,8 +365,8 @@ ${contactSection()}
 
 export function pricesPage(o) {
   const body = `${crumbs("Цены")}
-<section class="page-hero"><div class="wrap"><h1>Цены на ремонт в Ангарске</h1><p class="hero-p"><b>Точная стоимость — после бесплатной диагностики.</b> Указаны цены «от», они не являются публичной офертой.</p></div></section>
-<section><div class="wrap">${priceGroups.map((g) => `<div class="pgroup reveal"><h3>${esc(g.name)}</h3>${priceTable(g.items)}${g.note ? `<p class="note">${esc(g.note)}</p>` : ""}</div>`).join("")}</div></section>
+<section class="page-hero"><div class="wrap"><h1>Цены на ремонт в Ангарске</h1><p class="hero-p"><b>Цены фиксированные.</b> Где объём работ неизвестен, стоимость определяется после диагностики. ${esc(diagnostics.short)} Цены не являются публичной офертой.</p></div></section>
+<section><div class="wrap">${priceGroupRows().map((g) => `<div class="pgroup reveal"><h3>${esc(g.name)}</h3>${priceTable(g.rows)}${g.note ? `<p class="note">${esc(g.note)}</p>` : ""}</div>`).join("")}</div></section>
 ${calcSection()}${contactSection()}`;
   return layout({ ...o, path: "/ceny/", title: pagesOther.prices.title, desc: pagesOther.prices.desc, body });
 }

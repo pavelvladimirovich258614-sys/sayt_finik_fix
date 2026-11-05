@@ -56,28 +56,77 @@
   // Цели Метрики по клику
   document.addEventListener("click", function (e) { var a = e.target.closest("[data-goal]"); if (a) goal(a.dataset.goal); });
 
-  // Калькулятор
-  var sd = $("#c-dev");
-  if (sd && window.FF) {
-    var G = window.FF.groups, ss = $("#c-srv"), cr = $("#c-res");
-    sd.innerHTML = G.map(function (g, i) { return '<option value="' + i + '">' + g.name + "</option>"; }).join("");
-    var calc = function () {
-      var it = G[sd.value].items[ss.value];
-      cr.textContent = it[1] ? (it[2] ? "" : "от ") + fmt(it[1]) : "Стоимость уточняется после диагностики";
+  // Калькулятор: категория → [модель] → услуга. Данные и суммы готовит сервер (src/calc.mjs → window.FF.calc), здесь только показ.
+  var cc = $("#c-cat");
+  if (cc && window.FF && window.FF.calc) {
+    var C = window.FF.calc, ST = C.sticks;
+    var cm = $("#c-model"), cmr = $("#c-model-row"), cml = $("#c-model-l"), cs = $("#c-srv"), cres = $("#c-res"), clines = $("#c-lines"), cmeta = $("#c-meta"), creq = $("#c-req");
+    var stBox = $("#c-stick"), st1 = $("#c-st1"), st2 = $("#c-st2"), qty = $("#c-qty"), st2r = $("#c-st2row"), lap = $("#c-lap"), lapm = $("#c-lapm");
+    var opt = function (v, t) { return '<option value="' + v + '">' + t + "</option>"; };
+    var cur = null;
+    var cat = function () { return C.cats[cc.value]; };
+    var mdl = function () { return cat().models[cm.value || 0]; };
+    var typeOpts = ST.types.map(function (t, i) { return opt(i, t.name + " — " + fmt(t.price)); }).join("");
+    st1.innerHTML = typeOpts; st2.innerHTML = typeOpts;
+    var render = function () {
+      var c = cat(), m = mdl(), s = m.services[cs.value];
+      if (!s) { cres.textContent = ""; cur = null; return; }
+      var range = "", note = "", metaTxt = "", rows = "";
+      stBox.hidden = s.kind !== "sticks"; lap.hidden = s.input !== "laptopModel";
+      if (s.kind === "fixed") { range = fmt(s.price); cres.textContent = range; metaTxt = s.note || s.parts || ""; note = metaTxt; }
+      else if (s.kind === "sticks") {
+        var two = qty.value === "2", i = Number(st1.value), j = Number(st2.value);
+        st2r.hidden = !two;
+        if (two) {
+          var p = ST.pairs[i][j];
+          cres.textContent = fmt(p.total); range = "итого " + fmt(p.total);
+          rows = "<div><dt>Сумма двух стиков</dt><dd>" + fmt(p.sum) + "</dd></div><div><dt>Скидка " + ST.percent + "%</dt><dd>−" + fmt(p.discount) + "</dd></div><div class=\"tot\"><dt>Итого</dt><dd>" + fmt(p.total) + "</dd></div>";
+          note = "2 стика: " + ST.types[i].short + " + " + ST.types[j].short + "; сумма " + fmt(p.sum) + ", скидка " + ST.percent + "% −" + fmt(p.discount);
+          metaTxt = "Скидка " + ST.percent + "% считается от суммы двух выбранных стиков.";
+        } else { range = fmt(ST.types[i].price); cres.textContent = range; note = "1 стик: " + ST.types[i].short; metaTxt = "Цена за один стик (аналог)."; }
+      } else if (s.kind === "diag") { range = "Стоимость после диагностики"; cres.textContent = C.text.diag; }
+      else { range = "Стоимость после уточнения модели"; cres.textContent = C.text.model; if (s.input === "laptopModel") metaTxt = "Укажите модель ноутбука и отправьте заявку: уточню стоимость."; else metaTxt = "Отправьте заявку: уточню модель и стоимость."; }
+      if (s.input === "laptopModel" && lapm.value.trim()) note = "Модель ноутбука: " + lapm.value.trim().slice(0, 60);
+      clines.hidden = !rows; clines.innerHTML = rows; cmeta.textContent = metaTxt;
+      var priced = s.kind === "fixed" || s.kind === "sticks";
+      creq.textContent = priced ? "Оставить заявку с расчётом" : "Оставить заявку";
+      cur = { device: c.name + (c.modelLabel ? ": " + m.name : ""), service: s.name, range: range, note: note };
     };
-    var upd = function () { ss.innerHTML = G[sd.value].items.map(function (it, i) { return '<option value="' + i + '">' + it[0] + "</option>"; }).join(""); calc(); };
-    sd.onchange = upd; ss.onchange = calc; upd();
+    var fillServices = function (keepId) {
+      var m = mdl(), keep = 0;
+      cs.innerHTML = m.services.map(function (s, i) { if (s.id === keepId) keep = i; return opt(i, s.name); }).join("");
+      cs.value = String(keep);
+    };
+    var fillModels = function () {
+      var c = cat(); cmr.hidden = !c.modelLabel;
+      if (c.modelLabel) cml.textContent = c.modelLabel;
+      cm.innerHTML = c.models.map(function (m, i) { return opt(i, m.name); }).join("");
+      var def = 0; if (c.id === "console") c.models.forEach(function (m, i) { if (m.id === "ps5") def = i; });
+      cm.value = String(def);
+    };
+    cc.innerHTML = C.cats.map(function (c, i) { return opt(i, c.name); }).join("");
+    cc.onchange = function () { fillModels(); fillServices(); render(); };
+    cm.onchange = function () { var s = mdl().services[cs.value]; fillServices(s && s.id); render(); };
+    [cs, st1, st2, qty].forEach(function (e) { e.onchange = render; });
+    lapm.addEventListener("input", render);
+    st1.value = "0"; st2.value = String(ST.types.length - 1);
+    fillModels(); fillServices(); render();
+    window.FF.current = function () { render(); return cur; };
   }
 
-  // Акция: два аналога, скидка 15%. Итого = (цена первого + цена второго) × 0,85 (та же формула в src/pricing.mjs)
+  // Акция: два аналога, скидка 15%. Суммы берутся из таблицы FF.calc.sticks.pairs (формула одна: src/pricing.mjs)
   var pa = $("#pr-a"), pb = $("#pr-b"), promo = $("#promo");
-  if (pa && pb && promo) {
-    var disc = Number(promo.getAttribute("data-discount")) / 100;
+  if (pa && pb && promo && window.FF && window.FF.calc) {
+    var PT = window.FF.calc.sticks;
     var pupd = function () {
-      var sum = Number(pa.value) + Number(pb.value), total = Math.round(sum * (1 - disc));
-      $("#pr-sum").textContent = "от " + fmt(sum); $("#pr-disc").textContent = "−" + fmt(sum - total); $("#pr-total").textContent = "от " + fmt(total);
+      var p = PT.pairs[Number(pa.value)][Number(pb.value)];
+      $("#pr-sum").textContent = fmt(p.sum); $("#pr-disc").textContent = "−" + fmt(p.discount); $("#pr-total").textContent = fmt(p.total);
     };
     pa.addEventListener("change", pupd); pb.addEventListener("change", pupd);
+    window.FF.promoCurrent = function () {
+      var p = PT.pairs[Number(pa.value)][Number(pb.value)], A = PT.types[Number(pa.value)], B = PT.types[Number(pb.value)];
+      return { device: "Геймпады", service: "Замена двух стиков (скидка " + PT.percent + "%)", range: "итого " + fmt(p.total), note: "2 стика: " + A.short + " + " + B.short + "; сумма " + fmt(p.sum) + ", скидка " + PT.percent + "% −" + fmt(p.discount) };
+    };
   }
 
 })();
@@ -349,8 +398,8 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: "Ошибка ответа сервера" }; }).then(function (j) { j.status = r.status; return j; }); });
   };
   var calcNote = null;
-  var promoChosen = function () { var a = $("#pr-a"), b = $("#pr-b"); if (!a || !b) return null; var tx = function (n) { return (n && n.textContent) || ""; }; return { device: "Геймпад", service: "Замена двух аналогов (скидка 15%)", range: "итого " + tx($("#pr-total")) + " (сумма " + tx($("#pr-sum")) + ", скидка " + tx($("#pr-disc")) + ")", note: "Первый: " + a.options[a.selectedIndex].text + "; второй: " + b.options[b.selectedIndex].text }; };
-  var chosen = function () { var d = $("#c-dev"), s = $("#c-srv"); if (!d || !s || !d.options.length) return null; return { device: d.options[d.selectedIndex].text, service: s.options[s.selectedIndex].text, range: ($("#c-res") || {}).textContent || "" }; };
+  var promoChosen = function () { return window.FF && window.FF.promoCurrent ? window.FF.promoCurrent() : null; };
+  var chosen = function () { return window.FF && window.FF.current ? window.FF.current() : null; };
 
   fetch("/api/config").then(function (r) { return r.json(); }).then(function (cfg) {
     if (cfg.leads) {

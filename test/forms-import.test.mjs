@@ -156,9 +156,9 @@ test("заявки: по умолчанию 503; без каналов 503; бе
 
 test("заявки: доставка в Telegram (мок), параметры калькулятора, honeypot", async () => {
   const ch = mockCh(); const t = await boot({ LEADS_ENABLED: "1" }, { channels: [ch] });
-  const r = await t.call("/api/lead", { method: "POST", body: lead({ calc: { device: "PlayStation", service: "Замена HDMI-порта", range: "от 2 500 ₽" }, page: "/#calc" }) });
+  const r = await t.call("/api/lead", { method: "POST", body: lead({ calc: { device: "Игровые консоли: PlayStation 5", service: "Замена HDMI-порта", range: "6 500 ₽", note: "2 стика: Original + Gulikit; сумма 3 500 ₽, скидка 15% −525 ₽. Модель ноутбука: ASUS TUF F15" }, page: "/#calc" }) });
   const j = await r.json(); assert.equal(r.status, 201); assert.equal(j.saved, true); assert.equal(j.notified, true);
-  assert.equal(ch.sent.length, 1); assert.match(ch.sent[0], /НОВАЯ ЗАЯВКА/); assert.match(ch.sent[0], /\+79011112233/); assert.match(ch.sent[0], /Услуга: Замена HDMI-порта/); assert.match(ch.sent[0], /Устройство: PlayStation/); assert.match(ch.sent[0], /Заявка №1/);
+  assert.equal(ch.sent.length, 1); assert.match(ch.sent[0], /НОВАЯ ЗАЯВКА/); assert.match(ch.sent[0], /\+79011112233/); assert.match(ch.sent[0], /Услуга: Замена HDMI-порта/); assert.match(ch.sent[0], /Устройство: Игровые консоли: PlayStation 5/); assert.match(ch.sent[0], /6 500 ₽/); assert.match(ch.sent[0], /скидка 15% −525 ₽/); assert.match(ch.sent[0], /ASUS TUF F15/); assert.match(ch.sent[0], /Заявка №1/);
   const h = await t.call("/api/lead", { method: "POST", body: lead({ website: "bot" }) }); assert.equal(h.status, 200);
   assert.equal(ch.sent.length, 1, "honeypot не уходит в Telegram");
   const st = openStore(t.dir); assert.equal(st.listLeads().length, 1); st.close(); t.close();
