@@ -71,11 +71,11 @@ for (const [name, prof] of profiles) {
 
   // Сценарий Б: калькулятор -> окно заявки (без отправки)
   await p.goto(SITE + "/", { waitUntil: "networkidle" });
-  await p.selectOption("#c-dev", "0"); await p.selectOption("#c-srv", "0");
-  const res = (await p.textContent("#c-res")).trim(); ok(/от 2 500/.test(res), `${name}: калькулятор «${res}»`);
+  await p.selectOption("#c-cat", { label: "Игровые консоли" }); await p.selectOption("#c-model", { label: "PlayStation 5" }); await p.selectOption("#c-srv", { label: "Замена HDMI-порта" });
+  const res = (await p.textContent("#c-res")).trim(); ok(/^6\s500/.test(res.replace(/\u00a0/g, " ")), `${name}: калькулятор «${res}»`);
   const cfg = await (await ctx.request.get(SITE + "/api/config")).json();
   const calcBtn = p.locator("[data-cb-calc]");
-  if (cfg.leads) { await calcBtn.scrollIntoViewIfNeeded(); await calcBtn.click(); await p.waitForTimeout(300); ok(await p.locator("#cb-dialog").evaluate((d) => d.open) && /Замена HDMI-порта/.test(await p.textContent("#cb-calc")), `${name}: заявка из калькулятора открывается с выбранной услугой`); await p.keyboard.press("Escape"); } else ok(true, `${name}: приём заявок выключен (кнопка скрыта)`);
+  if (cfg.leads) { await calcBtn.scrollIntoViewIfNeeded(); await calcBtn.click(); await p.waitForTimeout(300); ok(await p.locator("#cb-dialog").evaluate((d) => d.open) && /Замена HDMI-порта/.test(await p.textContent("#cb-calc")) && /6.500/.test(await p.textContent("#cb-calc")), `${name}: заявка из калькулятора открывается с выбранной услугой`); await p.keyboard.press("Escape"); } else ok(true, `${name}: приём заявок выключен (кнопка скрыта)`);
 
   // Отзывы
   await p.goto(SITE + "/otzyvy/", { waitUntil: "networkidle" });
