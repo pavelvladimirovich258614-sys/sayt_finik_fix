@@ -225,6 +225,7 @@
 (function () {
   var home = document.getElementById("works-home-grid"), grid = document.getElementById("works-grid");
   if (!home && !grid) return;
+  var fmt = function (n) { return n.toLocaleString("ru-RU").replace(/[\u00a0\u202f]/g, " ") + " ₽"; };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function card(w, onOpen) {
     var b = el("button", "work-card"); b.type = "button";
@@ -232,7 +233,9 @@
     img.src = ph.src; img.alt = w.title; img.loading = "lazy"; img.decoding = "async"; img.width = ph.width; img.height = ph.height;
     var pic = el("span", "work-pic"); pic.appendChild(img);
     if (!w.is_real) pic.appendChild(el("span", "work-tag", "Иллюстрация"));
+    if (w.photos.length > 1) pic.appendChild(el("span", "work-count", w.photos.length + " фото"));
     b.appendChild(pic); b.appendChild(el("span", "work-title", w.title));
+    if (w.price_rub != null) b.appendChild(el("span", "work-price", "Стоимость работы: " + fmt(w.price_rub)));
     b.addEventListener("click", function () { onOpen(w); });
     return b;
   }
@@ -280,6 +283,8 @@
       img.src = p.enhancedSrc || p.src; img.alt = cur.title;
       if (p.enhancedSrc) { img.onerror = function () { img.onerror = null; img.src = p.src; lb.classList.remove("is-image-loading"); var s = lb.querySelector(".lb-photo-status"); if (s) s.textContent = "HD-версия недоступна, показан оригинал."; }; }
       lb.querySelector(".lb-title").textContent = cur.title;
+      lb.querySelector(".lb-desc").textContent = cur.description || "";
+      lb.querySelector(".lb-price").textContent = cur.price_rub != null ? "Стоимость этой выполненной работы: " + fmt(cur.price_rub) + ". " + (cur.price_note || "Не является текущим прайсом.") : "";
       lb.querySelector(".lb-badge").textContent = cur.is_real ? "Реальная работа" : "Иллюстрация";
       lb.querySelector(".lb-problem").textContent = cur.problem ? "Проблема: " + cur.problem : "";
       lb.querySelector(".lb-solution").textContent = cur.solution ? "Что сделано: " + cur.solution : "";
@@ -345,4 +350,91 @@
   var cur = read();
   if (cur && cur.analytics) loadYm();
   else if (ymId && !cur) open(false);
+})();
+
+
+// Обратный звонок и отзывы: показываются, только если сервер сообщает, что приём включён (/api/config)
+(function () {
+  if (!window.fetch) return;
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var post = function (url, data) {
+    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data), credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "Ошибка ответа сервера" }; }).then(function (j) { j.status = r.status; return j; }); });
+  };
+  var calcNote = null;
+  var chosen = function () { var d = $("#c-dev"), s = $("#c-srv"); if (!d || !s || !d.options.length) return null; return { device: d.options[d.selectedIndex].text, service: s.options[s.selectedIndex].text, range: ($("#c-res") || {}).textContent || "" }; };
+
+  fetch("/api/config").then(function (r) { return r.json(); }).then(function (cfg) {
+    if (cfg.leads) {
+      document.querySelectorAll("[data-cb]").forEach(function (b) { b.hidden = false; });
+      document.body.classList.add("has-cb");
+    }
+    if (cfg.reviews) { var w = $("#rv-form-wrap"); if (w) w.hidden = false; }
+  }).catch(function () {});
+
+  // Диалог обратного звонка
+  var dlg = $("#cb-dialog"), form = $("#cb-form");
+  if (dlg && form) {
+    var msg = $("#cb-msg"), cn = $("#cb-calc"), opener = null, busy = false;
+    document.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-cb]"); if (!t) return;
+      opener = t; calcNote = t.hasAttribute("data-cb-calc") ? chosen() : null;
+      cn.hidden = !calcNote; cn.textContent = calcNote ? "Ваш расчёт: " + calcNote.device + ", " + calcNote.service + (calcNote.range ? " — " + calcNote.range : "") : "";
+      msg.textContent = ""; msg.className = "cb-msg"; form.hidden = false;
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+      form.name.focus();
+    });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg || e.target.closest("[data-cb-close]")) dlg.close(); });
+    dlg.addEventListener("close", function () { if (opener) opener.focus(); });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault(); if (busy) return;
+      var fail = function (t) { msg.textContent = t; msg.className = "cb-msg err"; };
+      if (form.name.value.trim().length < 2) { fail("Укажите имя"); form.name.focus(); return; }
+      if (form.phone.value.replace(/\D/g, "").length < 10) { fail("Проверьте номер телефона"); form.phone.focus(); return; }
+      if (!form.consent.checked) { fail("Нужно согласие на обработку персональных данных"); form.consent.focus(); return; }
+      busy = true; msg.textContent = "Отправляю…"; msg.className = "cb-msg";
+      var data = { name: form.name.value, phone: form.phone.value, comment: form.comment.value, consent: true, website: form.website.value, page: location.pathname };
+      if (calcNote) data.calc = calcNote;
+      post("/api/lead", data).then(function (j) {
+        busy = false;
+        if (j.ok) { msg.textContent = j.message || "Заявка сохранена."; msg.className = "cb-msg ok"; form.reset(); try { if (window.ym && window.__ym) window.ym(window.__ym, "reachGoal", "lead"); } catch (x) {} }
+        else fail(j.error || "Не удалось отправить. Позвоните мастеру.");
+      }).catch(function () { busy = false; fail("Нет связи с сервером. Позвоните мастеру."); });
+    });
+  }
+
+  // Отзывы
+  var av = $("#rv-avito");
+  if (av) {
+    var el = function (t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+    var item = function (r, src) {
+      var a = el("article", "card rv"); var h = el("div", "rv-h");
+      h.appendChild(el("b", "", r.author)); if (r.date) h.appendChild(el("span", "rv-d", r.date));
+      if (src === "site") h.appendChild(el("span", "rv-r", "★".repeat(r.rating) + "☆".repeat(5 - r.rating)));
+      a.appendChild(h); if (src === "avito" && r.item) a.appendChild(el("p", "rv-i", "Услуга на Авито: " + r.item));
+      a.appendChild(el("p", "rv-t", r.text));
+      if (src === "avito") a.appendChild(el("p", "rv-s", "Источник: Авито" + (r.has_photos ? " · в отзыве были фото (не опубликованы)" : "") + " · оценка отзыва в выгрузке не указана"));
+      if (r.reply) a.appendChild(el("p", "rv-reply", "Ответ мастера: " + r.reply));
+      return a;
+    };
+    fetch("/api/reviews").then(function (r) { return r.json(); }).then(function (d) {
+      (d.avito || []).forEach(function (r) { av.appendChild(item(r, "avito")); });
+      if (!(d.avito || []).length) av.appendChild(el("p", "note", "Отзывы загружаются на сервер отдельно. Пока читайте их в профиле на Авито."));
+      var ss = $("#rv-site"); (d.site || []).forEach(function (r) { ss.appendChild(item(r, "site")); });
+      $("#rv-site-sum").textContent = d.siteCount ? "Рейтинг на сайте: " + d.siteAvg.toString().replace(".", ",") + " из 5 · отзывов: " + d.siteCount + " (считается отдельно от Авито)" : "Пока нет проверенных отзывов, оставленных на сайте.";
+    }).catch(function () { av.appendChild(el("p", "note", "Не удалось загрузить отзывы. Откройте профиль на Авито.")); });
+    var rf = $("#rv-form");
+    if (rf) rf.addEventListener("submit", function (e) {
+      e.preventDefault(); var m = $("#rv-msg"), bad = function (t) { m.textContent = t; m.className = "cb-msg err"; };
+      var rating = rf.querySelector("input[name=rating]:checked");
+      if (rf.name.value.trim().length < 2) return bad("Укажите имя");
+      if (!rating) return bad("Поставьте оценку");
+      if (rf.text.value.trim().length < 10) return bad("Напишите отзыв подробнее");
+      if (!rf.consent.checked) return bad("Нужно согласие");
+      m.textContent = "Отправляю…"; m.className = "cb-msg";
+      post("/api/reviews", { name: rf.name.value, rating: Number(rating.value), text: rf.text.value, consent: true, website: rf.website.value }).then(function (j) {
+        if (j.ok) { m.textContent = j.message; m.className = "cb-msg ok"; rf.reset(); } else bad(j.error || "Не удалось отправить отзыв");
+      }).catch(function () { bad("Нет связи с сервером"); });
+    });
+  }
 })();

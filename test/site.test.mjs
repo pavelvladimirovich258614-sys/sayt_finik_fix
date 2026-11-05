@@ -142,11 +142,13 @@ test("юридические страницы в подвале открываю
   assert.match(readFileSync(pub("mailing/index.html"), "utf8"), /не соглашаетесь получать рекламу/);
 });
 
-test("форм заявки нет, кнопки связи на месте: tel, MAX, Telegram", () => {
+test("прямые кнопки связи на месте: tel, MAX, Telegram; форма обратного звонка только штатная и скрытая до включения", () => {
   const tel = "tel:+79016624589", max = "https://web.max.ru/259685091", tg = "https://t.me/+79016624589";
   for (const f of allHtml()) {
     const h = readFileSync(f, "utf8"), rel = f.split("/public/")[1];
-    assert.doesNotMatch(h, /<form|id="lead"|Оставить заявку|href="#request"|\/api\/lead|spasibo/, rel);
+    assert.doesNotMatch(h, /id="lead"|href="#request"|\/api\/lead|spasibo|mailto:[^"]*\?subject/, rel);
+    for (const m of h.matchAll(/<form[^>]*>/g)) assert.match(m[0], /id="(cb-form|rv-form)"/, rel + " неожиданная форма");
+    if (!/admin/.test(rel)) { assert.match(h, /<button[^>]*data-cb hidden/, rel + " кнопка заявки скрыта до включения"); assert.match(h, /class="mbar"/, rel); assert.match(h, /name="consent" required/, rel); }
     if (/admin/.test(rel)) continue;
     for (const u of [tel, max, tg]) assert.ok(h.includes(`href="${u}"`), rel + " " + u);
     assert.match(h, /class="float"[^>]*aria-label="Быстрая связь"/);
@@ -155,7 +157,9 @@ test("форм заявки нет, кнопки связи на месте: tel
   }
   const home = readFileSync(pub("index.html"), "utf8");
   assert.match(home, /Позвонить/); assert.match(home, /Написать в MAX/); assert.match(home, /Написать в Telegram/);
-  assert.doesNotMatch(readFileSync(join(import.meta.dirname, "..", "src/client/app.js"), "utf8"), /api\/lead|f-phone|#lead/);
+  assert.doesNotMatch(readFileSync(join(import.meta.dirname, "..", "src/client/app.js"), "utf8"), /f-phone|#lead/);
+  const app = readFileSync(join(import.meta.dirname, "..", "src/client/app.js"), "utf8");
+  assert.ok(!/email|mailto/i.test(app), "отправки на email нет");
 });
 
 const webpSize = (f) => {

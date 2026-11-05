@@ -84,3 +84,14 @@ Actions → **Deploy FinikFix** → Run workflow (ветка `claude/epic-hypati
 
 Обновить скрипт ежедневной копии на сервере (после деплоя этой версии): повторно запустить `bootstrap-vps.sh` (он идемпотентен) или `sudo install -m 0755 /opt/finikfix/current/deploy/finikfix-backup.sh /etc/cron.daily/finikfix-backup`.
 
+
+
+## Импорт портфолио и отзывов (после деплоя новой версии)
+Команды и правила: `docs/LEADS.md`. Коротко (от пользователя `finikfix`, из каталога релиза):
+```bash
+cd /opt/finikfix/current
+node --env-file=/opt/finikfix/shared/.env scripts/import-portfolio.mjs          # пробный запуск
+node --env-file=/opt/finikfix/shared/.env scripts/import-portfolio.mjs --commit # копия базы создаётся автоматически
+node --env-file=/opt/finikfix/shared/.env scripts/import-reviews.mjs --commit
+```
+Убедитесь, что в `/opt/finikfix/shared/.env` задан `DATA_DIR=/opt/finikfix/shared/data` (как у работающего сервиса).

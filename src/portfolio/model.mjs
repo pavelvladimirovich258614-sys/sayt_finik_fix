@@ -9,7 +9,7 @@ const bool = (v) => (v === true || v === 1 || v === "1" || v === "true" ? 1 : 0)
 const text = (v, n) => String(v ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, n);
 
 export function cleanWork(b) {
-  const w = { title: text(b.title, 120), category: String(b.category || ""), problem: text(b.problem, 2000), solution: text(b.solution, 2000), is_real: bool(b.is_real), published: bool(b.published), on_home: bool(b.on_home), in_slider: bool(b.in_slider) };
+  const w = { title: text(b.title, 120), category: String(b.category || ""), problem: text(b.problem, 2000), solution: text(b.solution, 2000), description: text(b.description, 2000), price_rub: Number.isInteger(+b.price_rub) && b.price_rub !== "" && b.price_rub !== null && +b.price_rub >= 0 && +b.price_rub <= 1000000 ? +b.price_rub : null, price_note: text(b.price_note, 200), is_real: bool(b.is_real), published: bool(b.published), on_home: bool(b.on_home), in_slider: bool(b.in_slider) };
   if (!w.title) return { error: "Укажите название работы" };
   if (!CAT_SET.has(w.category)) return { error: "Выберите категорию" };
   return { work: w };

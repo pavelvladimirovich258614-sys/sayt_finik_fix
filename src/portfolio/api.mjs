@@ -86,6 +86,17 @@ export function createPortfolio(env, dataDir) {
     if (path === "/admin/api/logout" && req.method === "POST") { st.delSession(sess.id); return json(res, 200, { ok: true }, { "Set-Cookie": sessionCookie("", true, 0) }); }
     if (path === "/admin/api/works" && req.method === "GET") return json(res, 200, { ok: true, works: st.listAll().map(publicWork) });
 
+    if (path === "/admin/api/reviews" && req.method === "GET") {
+      const status = url.searchParams.get("status") || "", source = url.searchParams.get("source") || "";
+      return json(res, 200, { ok: true, reviews: st.listReviews({ status: ["pending", "approved", "rejected", "hidden"].includes(status) ? status : "", source: ["avito", "site"].includes(source) ? source : "" }) });
+    }
+    if (path === "/admin/api/leads" && req.method === "GET") return json(res, 200, { ok: true, leads: st.listLeads() });
+    const rm = /^\/admin\/api\/reviews\/(\d+)\/status$/.exec(path);
+    if (rm && req.method === "POST") {
+      const b = await (async () => { const buf = await readBody(req, 4096); try { return JSON.parse(buf?.toString() || ""); } catch { return null; } })();
+      if (!b || !["pending", "approved", "rejected", "hidden"].includes(b.status)) return json(res, 400, { ok: false, error: "Неверный статус" });
+      return st.setReviewStatus(Number(rm[1]), b.status) ? json(res, 200, { ok: true }) : json(res, 404, { ok: false, error: "Не найдено" });
+    }
     const jsonBody = async () => { const buf = await readBody(req, 64 * 1024); try { return JSON.parse(buf?.toString() || ""); } catch { return null; } };
     if (path === "/admin/api/works" && req.method === "POST") {
       const b = await jsonBody(); if (!b) return json(res, 400, { ok: false, error: "Неверный запрос" });

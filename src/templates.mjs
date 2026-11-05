@@ -73,6 +73,7 @@ const maxLink = () => (site.max ? `<a href="${esc(site.max)}" target="_blank" re
 export function contactBtns({ wa = false, cls = "" } = {}) {
   const ext = 'target="_blank" rel="noopener noreferrer" data-goal="messenger"';
   return `<div class="cbtns${cls ? " " + cls : ""}">` +
+    `<button type="button" class="cbtn cb-req" data-cb hidden>${brandIcon("call", 22)}<span>Оставить заявку</span></button>` +
     `<a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить</span></a>` +
     (site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" ${ext}>${brandIcon("max", 24)}<span>Написать в MAX</span></a>` : "") +
     `<a class="cbtn cb-tg" href="${esc(site.telegram)}" ${ext}>${brandIcon("tg", 24)}<span>Написать в Telegram</span></a>` +
@@ -126,7 +127,7 @@ export function calcSection() {
   return `<section id="calc"><div class="wrap">
   <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">Сколько это примерно стоит</h2><p class="lead reveal">Выберите устройство и услугу — получите ориентир. Точная стоимость — после бесплатной диагностики.</p>
   <div class="calc reveal" id="calc-box"><label for="c-dev">Устройство</label><select id="c-dev"></select><label for="c-srv">Услуга</label><select id="c-srv"></select>
-  <div class="res" id="c-res" aria-live="polite"></div><p class="note">Позвоните или напишите, чтобы уточнить цену:</p>${contactBtns({ cls: "stack" })}</div>
+  <div class="res" id="c-res" aria-live="polite"></div><button type="button" class="btn" data-cb data-cb-calc hidden>Оставить заявку с этим расчётом</button><p class="note">Позвоните или напишите, чтобы уточнить цену:</p>${contactBtns({ cls: "stack" })}</div>
   </div></section>`;
 }
 
@@ -151,6 +152,27 @@ function cookieUi(metrika) {
   <label class="ck-row"><input type="checkbox" id="ck-an"><span><b>Аналитика</b>: Яндекс.Метрика (посещаемость и карты кликов). Включается только по вашему согласию.</span></label>
   <div class="ck-acts"><button type="button" class="btn sm" id="ck-save">Сохранить выбор</button></div></div>` : ""}
 </div>`;
+}
+
+const cbDialog = `<dialog id="cb-dialog" class="cb-dialog" aria-labelledby="cb-title"><form id="cb-form" method="dialog" novalidate>
+  <button type="button" class="lb-x" data-cb-close aria-label="Закрыть">×</button>
+  <h2 id="cb-title">Заказать обратный звонок</h2>
+  <p class="note">Оставьте телефон, и мастер перезвонит в рабочее время (${site.hours}).</p>
+  <p class="cb-calc" id="cb-calc" hidden></p>
+  <label>Имя<input name="name" autocomplete="name" required maxlength="60"></label>
+  <label>Телефон<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" required maxlength="20"></label>
+  <label>Комментарий (необязательно)<textarea name="comment" rows="3" maxlength="500"></textarea></label>
+  <label class="cb-hp" aria-hidden="true">Не заполняйте<input name="website" tabindex="-1" autocomplete="off"></label>
+  <label class="cb-consent"><input type="checkbox" name="consent" required><span>Я даю <a href="/consent/" target="_blank" rel="noopener">согласие на обработку персональных данных</a> (имя, телефон) для обратной связи по этой заявке и ознакомлен с <a href="/privacy/" target="_blank" rel="noopener">политикой</a>.</span></label>
+  <p class="cb-msg" id="cb-msg" role="status" aria-live="polite"></p>
+  <button type="submit" class="btn">Отправить заявку</button>
+  <p class="note">Данные передаются мастеру через Telegram-бота и не используются для рассылок.</p>
+</form></dialog>`;
+const mobileBar = `<nav class="mbar" aria-label="Быстрая связь"><a href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 20)}<span>Позвонить</span></a><a href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("tg", 20)}<span>Telegram</span></a>${site.max ? `<a href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("max", 20)}<span>MAX</span></a>` : ""}<button type="button" data-cb hidden><span>Заявка</span></button></nav>`;
+export function videoSection() {
+  return `<section id="video"><div class="wrap"><span class="eyebrow reveal">Видеовизитка</span><h2 class="reveal">Знакомство с мастером</h2>
+  ${site.video ? `<div class="video-box reveal"><video controls preload="none" playsinline src="${esc(site.video)}"></video></div>` : `<div class="video-box video-wait reveal" role="img" aria-label="Место для видеовизитки мастера"><span>Видеовизитка появится здесь</span></div>`}
+  </div></section>`;
 }
 
 export function layout({ path, title, desc, body, jsonld = [], hasPhoto, metrika, siteUrl, noindex = false }) {
@@ -193,7 +215,7 @@ ${body}
   <p class="legal-line">${site.inn ? `ИНН ${esc(site.inn)}. ` : ""}Цены «от» и вилки не являются публичной офертой.</p>
   <p class="legal-line"><a href="/privacy/">Политика конфиденциальности</a> · <a href="/consent/">Согласие на обработку ПД</a> · <a href="/cookies/">Файлы cookie</a> · <a href="/terms/">Пользовательское соглашение</a> · <a href="/mailing/">Уведомления и рассылки</a> · <button type="button" class="linkbtn" id="ck-open">Настройки cookie</button> · © ${site.brand}</p>
 </div></footer>
-<nav class="float" aria-label="Быстрая связь"><a class="fl-call" href="tel:${site.phoneRaw}" aria-label="Позвонить мастеру: ${site.phone}" data-goal="call">${brandIcon("call", 24)}</a>${site.max ? `<a class="fl-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX" data-goal="messenger">${brandIcon("max", 28)}</a>` : ""}<a class="fl-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram" data-goal="messenger">${brandIcon("tg", 28)}</a><a class="fl-wa" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp" data-goal="messenger">${brandIcon("wa", 28)}</a></nav>${brandDefs}
+<nav class="float" aria-label="Быстрая связь"><a class="fl-call" href="tel:${site.phoneRaw}" aria-label="Позвонить мастеру: ${site.phone}" data-goal="call">${brandIcon("call", 24)}</a>${site.max ? `<a class="fl-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX" data-goal="messenger">${brandIcon("max", 28)}</a>` : ""}<a class="fl-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram" data-goal="messenger">${brandIcon("tg", 28)}</a><a class="fl-wa" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp" data-goal="messenger">${brandIcon("wa", 28)}</a></nav>${mobileBar}${cbDialog}${brandDefs}
 <script>window.FF=${JSON.stringify({ groups: priceGroups.map((g) => ({ name: g.name, items: g.items.map((i) => [i[0], i[1], !!i[2]]) })), avito: site.avito })}</script>
 ${cookieUi(metrika)}
 <script src="/assets/app.js" defer></script>
@@ -222,7 +244,7 @@ ${heroSlider()}
     <p class="hero-p reveal"><b>Диагностика бесплатно. Гарантия 90 дней.</b> Моя основная специализация — PlayStation, Xbox и Nintendo: замена HDMI, дрифт стиков, перегрев и сложные поломки. Опыт 10+ лет. Федеральные сети консоли не берут, я чиню.</p>
     <div class="acts reveal">${contactBtns()}</div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
-    <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>60 отзывов на Авито</span></li></ul>
+    <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li><li><b>4,8 ★</b><span>рейтинг на Авито (62 отзыва)</span></li></ul>
   </div>
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
@@ -264,10 +286,11 @@ ${heroSlider()}
 </div></section>
 
 ${calcSection()}
+${videoSection()}
 
 <section class="alt"><div class="wrap">
   <span class="eyebrow reveal">Доказательства</span><h2 class="reveal">Реальные работы и отзывы</h2>
-  <p class="lead reveal">Рейтинг 4,8 и 60 отзывов на Авито. Фото ремонтов — в портфолио, там всё без ретуши.</p>
+  <p class="lead reveal">Рейтинг профиля на Авито — 4,8 (62 отзыва). Реальные кейсы с фото — в портфолио на сайте.</p>
   <div class="reveal">${portfolioBtn()}</div>
 </div></section>
 
@@ -335,15 +358,31 @@ export function portfolioPage(o) {
   <div id="works-empty" class="card" hidden><h3>Работы скоро появятся</h3><p>Пока смотрите фото ремонтов в моём портфолио на Авито.</p><div class="acts">${portfolioBtn()}</div></div>
   <noscript><p class="note">Для просмотра галереи включите JavaScript или откройте <a href="${site.avito}" target="_blank" rel="noopener">портфолио на Авито</a>.</p></noscript>
 </div></section>
-<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><p class="lb-photo-status" role="status" aria-live="polite"></p><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
+<dialog id="lightbox" class="lightbox" aria-label="Просмотр работы"><div class="lb-box"><button type="button" class="lb-x" aria-label="Закрыть">×</button><div class="lb-pic"><button type="button" class="lb-n lb-prev" aria-label="Предыдущее фото">‹</button><img alt=""><button type="button" class="lb-n lb-next" aria-label="Следующее фото">›</button></div><p class="lb-photo-status" role="status" aria-live="polite"></p><div class="lb-txt"><span class="lb-badge"></span><h2 class="lb-title"></h2><p class="lb-desc"></p><p class="lb-price"></p><p class="lb-problem"></p><p class="lb-solution"></p><div class="lb-count"></div></div></div></dialog>
 ${contactSection()}`;
   return layout({ ...o, path: "/portfolio/", title: "Портфолио работ — FinikFix, Ангарск", desc: "Фото выполненных ремонтов игровых консолей, геймпадов, ноутбуков и ПК в мастерской FinikFix, Ангарск.", body });
 }
 
 export function reviewsPage(o) {
   const body = `${crumbs("Отзывы")}
-<section class="page-hero"><div class="wrap"><h1>Отзывы клиентов</h1><p class="hero-p">Рейтинг <b>4,8</b> и <b>60 отзывов</b> на Авито. Читайте их в профиле, а фото реальных ремонтов смотрите в портфолио.</p>
+<section class="page-hero"><div class="wrap"><h1>Отзывы клиентов</h1><p class="hero-p">Отзывы с Авито и отзывы, оставленные на этом сайте, показываются отдельно. Новые отзывы с сайта публикуются только после проверки.</p>
 <div class="acts">${portfolioBtn()}<a class="btn ghost" href="${site.avitoAd}" target="_blank" rel="noopener">Объявление по смартфонам на Авито</a></div></div></section>
+<section><div class="wrap"><span class="eyebrow">Авито</span><h2>Отзывы на Авито</h2>
+  <div class="card rv-stats"><p class="big">4,8 из 5 · 62 отзыва</p><p class="note">Источник: профиль «Ремонт цифровой техники» на Авито, данные на 5 ноября 2026: 58 оценок «5», одна «3», три «1». Это общий рейтинг профиля (в него входят и покупки). Оценки отдельных отзывов в выгрузке не указаны, поэтому ниже они не показаны. Этот рейтинг не является рейтингом сайта.</p></div>
+  <div id="rv-avito" class="rv-list" aria-live="polite"></div><noscript><p class="note">Для просмотра отзывов включите JavaScript или откройте профиль на Авито.</p></noscript></div></section>
+<section class="alt"><div class="wrap"><span class="eyebrow">FinikFix</span><h2>Отзывы на сайте</h2>
+  <p id="rv-site-sum" class="note"></p><div id="rv-site" class="rv-list" aria-live="polite"></div>
+  <div id="rv-form-wrap" hidden><h3>Оставить отзыв</h3>
+  <form id="rv-form" class="rv-form" novalidate>
+    <label>Имя<input name="name" required maxlength="60" autocomplete="given-name"></label>
+    <fieldset class="rv-stars"><legend>Оценка</legend>${[5, 4, 3, 2, 1].map((n) => `<label><input type="radio" name="rating" value="${n}" required><span>${n} ★</span></label>`).join("")}</fieldset>
+    <label>Отзыв<textarea name="text" rows="5" required minlength="10" maxlength="1500"></textarea></label>
+    <label class="cb-hp" aria-hidden="true">Не заполняйте<input name="website" tabindex="-1" autocomplete="off"></label>
+    <label class="cb-consent"><input type="checkbox" name="consent" required><span>Я согласен на <a href="/consent/" target="_blank" rel="noopener">обработку персональных данных</a> и публикацию моего имени и отзыва на сайте после проверки.</span></label>
+    <p class="cb-msg" id="rv-msg" role="status" aria-live="polite"></p>
+    <button type="submit" class="btn">Отправить отзыв</button>
+    <p class="note">Отзыв сохраняется и проверяется мастером. Ссылки и контакты в тексте не принимаются.</p>
+  </form></div></div></section>
 ${contactSection()}`;
   return layout({ ...o, path: "/otzyvy/", title: pagesOther.reviews.title, desc: pagesOther.reviews.desc, body });
 }
