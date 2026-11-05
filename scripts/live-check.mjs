@@ -11,7 +11,8 @@ const profiles = [
   ["iPhone 13 (375)", devices["iPhone 13"]],
   ["Pixel 7 (412)", devices["Pixel 7"]],
   ["Малый экран 320", { viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true, userAgent: devices["iPhone 13"].userAgent, deviceScaleFactor: 2 }],
-  ["Планшет 768", { viewport: { width: 768, height: 1024 }, hasTouch: true }],
+  ["Планшет 768 (сенсор)", { viewport: { width: 768, height: 1024 }, hasTouch: true }],
+  ["Планшет 768 (мышь)", { viewport: { width: 768, height: 1024 } }],
   ["ПК 1280", { viewport: { width: 1280, height: 900 } }],
   ["ПК 1920", { viewport: { width: 1920, height: 1080 } }],
 ];
@@ -59,15 +60,21 @@ for (const [name, prof] of profiles) {
   ok(hrefs.includes(TG), `${name}: личная ссылка Telegram ${TG}`); ok(hrefs.includes(MAX), `${name}: личная ссылка MAX ${MAX}`);
   ok(!hrefs.some((h) => /se14906499|uved_nikita/.test(h || "")), `${name}: ссылок на ботов уведомлений нет`);
   ok(hrefs.filter((h) => /t\.me|max\.ru/.test(h || "")).every((h) => [TG, MAX, "https://t.me/finik_fix"].includes(h)), `${name}: все ссылки на Telegram/MAX — из утверждённых`);
-  if (!mobile) {
+  // Кнопка «Скопировать номер» нужна только при мыши (hover:hover + pointer:fine); на сенсорных устройствах скрыта, звонок идёт через tel:.
+  // Критерий — тип ввода профиля (hasTouch), а не ширина экрана или isMobile.
+  const touch = !!prof.hasTouch;
+  if (!touch) {
     const cp = p.locator("[data-copy]").first();
-    if (await cp.isVisible()) { await cp.click(); await p.waitForTimeout(300); const clip = await p.evaluate(() => navigator.clipboard.readText()); ok(clip === PHONE, `${name}: «Скопировать номер» кладёт ${clip} в буфер`); } else ok(false, `${name}: кнопка «Скопировать номер» не видна на ПК`);
+    if (await cp.isVisible()) { await cp.click(); await p.waitForTimeout(300); const clip = await p.evaluate(() => navigator.clipboard.readText()); ok(clip === PHONE, `${name}: «Скопировать номер» кладёт ${clip} в буфер`); } else ok(false, `${name}: кнопка «Скопировать номер» не видна при управлении мышью`);
   } else {
-    ok(!(await p.locator("[data-copy]").first().isVisible()), `${name}: на смартфоне кнопка копирования скрыта, звонок через tel:`);
-    const bar = p.locator(".mbar");
+    ok(!(await p.locator("[data-copy]").first().isVisible()), `${name}: при сенсорном вводе кнопка копирования скрыта, звонок через tel:`);
+  }
+  // Нижняя панель связи показывается на ширине ≤ 700 px и в пределах экрана; шире её нет
+  const bar = p.locator(".mbar");
+  if (prof.viewport.width <= 700) {
     ok(await bar.isVisible(), `${name}: нижняя панель связи видна`);
     const box = await bar.boundingBox(); ok(box && box.y + box.height <= prof.viewport.height + 1, `${name}: панель в пределах экрана`);
-  }
+  } else ok(!(await bar.isVisible()), `${name}: нижней панели на широком экране нет`);
 
   // Сценарий Б: калькулятор -> окно заявки (без отправки)
   await p.goto(SITE + "/", { waitUntil: "networkidle" });
