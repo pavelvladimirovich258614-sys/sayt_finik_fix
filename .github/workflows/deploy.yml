@@ -107,7 +107,7 @@ jobs:
           # Форма обратного звонка штатная и скрыта, пока не включена (LEADS_ENABLED): допускается только окно #cb-form и скрытые кнопки.
           ! grep -qiE 'id="lead"|оставьте заявку|href="#request"' /tmp/index.html || { echo "::error::На главной остались следы старой формы заявки"; exit 1; }
           [ "$(grep -o '<form' /tmp/index.html | wc -l)" = "1" ] && grep -q '<form id="cb-form"' /tmp/index.html || { echo "::error::На главной должна быть только форма обратного звонка #cb-form"; exit 1; }
-          ! grep -E '<button[^>]*data-cb' /tmp/index.html | grep -qv 'hidden' || { echo "::error::Кнопка заявки видна при выключенном приёме"; exit 1; }
+          ! grep -oE '<button[^>]*data-cb[ >][^>]*>' /tmp/index.html | grep -qv 'hidden' || { echo "::error::Кнопка заявки видна при выключенном приёме"; exit 1; }
           for p in privacy consent cookies terms mailing portfolio ceny kontakty; do
             curl -fsS -m 15 -o /dev/null "$SITE/$p/" || { echo "::error::Страница /$p/ недоступна"; exit 1; }
           done
