@@ -12,7 +12,7 @@ on:
       op:
         description: "Операция"
         type: choice
-        options: [probe, logs, status, backup, import-dry, import-commit, tg-setup, tg-test, enable-reviews, enable-leads, test-lead, verify]
+        options: [probe, net, logs, status, backup, import-dry, import-commit, tg-setup, tg-test, enable-reviews, enable-leads, test-lead, verify]
         default: probe
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           OP="${{ inputs.op }}"; [ -n "$OP" ] || OP="${GITHUB_REF_NAME#ops/}"
-          case "$OP" in probe|logs|status|backup|import-dry|import-commit|tg-setup|tg-test|enable-reviews|enable-leads|test-lead|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
+          case "$OP" in probe|net|logs|status|backup|import-dry|import-commit|tg-setup|tg-test|enable-reviews|enable-leads|test-lead|verify) ;; *) echo "::error::Операция '$OP' не разрешена"; exit 1;; esac
           git fetch -q origin claude/epic-hypatia-mxxztu
           git merge-base --is-ancestor "$GITHUB_SHA" origin/claude/epic-hypatia-mxxztu || { echo "::error::Коммит не входит в рабочую ветку"; exit 1; }
           echo "op=$OP" >> "$GITHUB_OUTPUT"; echo "Операция: $OP"
@@ -83,6 +83,17 @@ jobs:
               echo "== nginx server_name/listen/блок lead:"; grep -rhnE "server_name|listen|location = /api/lead|ssl_certificate " /etc/nginx/sites-enabled/ 2>&1 | head -20
               echo "== letsencrypt: $(ls /etc/letsencrypt/live 2>&1 | tr '\n' ' ')"
               echo "== node: $(node -v)"; echo "== порты:"; ss -ltn | awk 'NR==1||/:(80|443|3000|22) /'
+          REMOTE
+              ;;
+            net)
+              # Сетевая доступность с сервера (без токена): DNS, TCP/TLS и HTTP-ответ Telegram API, MAX API и контрольных узлов.
+              ssh -T finikfix 'bash -s' <<'REMOTE'
+          for h in api.telegram.org platform-api.max.ru dev.max.ru api.github.com; do
+            echo "== $h"; echo "dns: $(getent ahosts $h | awk '{print $1}' | sort -u | tr '\n' ' ')"
+            curl -sS -m 10 -o /dev/null -w "https: code=%{http_code} connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s\n" "https://$h/" 2>&1 | tail -1
+          done
+          echo "== порт 443 api.telegram.org: $(timeout 6 bash -c 'echo > /dev/tcp/api.telegram.org/443' 2>&1 && echo открыт || echo закрыт-или-таймаут)"
+          echo "== исходящий IP: $(curl -sS -m 8 https://api.ipify.org 2>&1)"
           REMOTE
               ;;
             logs) ssh -T finikfix "sudo -n /usr/bin/journalctl -u finikfix -n 80 --no-pager" | sed -E 's/[0-9]{6,12}:[A-Za-z0-9_-]{30,}/***TOKEN***/g' ;;

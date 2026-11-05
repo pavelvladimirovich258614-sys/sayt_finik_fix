@@ -2,11 +2,11 @@
 // Telegram: Bot API, метод sendMessage (https://core.telegram.org/bots/api#sendmessage). MAX: НЕ реализован,
 // пока нет доступа к документации и подтверждённого бота (см. docs/LEADS.md).
 
-export function telegramChannel({ token, chatId, name = "telegram", fetchImpl = fetch, timeoutMs = 5000 }) {
+export function telegramChannel({ token, chatId, name = "telegram", fetchImpl = fetch, timeoutMs = 5000, apiBase = "https://api.telegram.org" }) {
   return {
     name,
     async send(text) {
-      const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
+      const res = await fetchImpl(`${apiBase}/bot${token}/sendMessage`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
         signal: AbortSignal.timeout(timeoutMs),
@@ -21,7 +21,7 @@ export function channelsFromEnv(env, fetchImpl = fetch) {
   const list = [];
   // TG_CHAT_ID: один id или несколько через запятую; на каждого получателя своя запись доставки (сбой одного не блокирует другого).
   const ids = String(env.TG_CHAT_ID || "").split(",").map((x) => x.trim()).filter((x) => /^-?\d+$/.test(x));
-  if (env.TG_BOT_TOKEN) ids.forEach((id, i) => list.push(telegramChannel({ token: env.TG_BOT_TOKEN, chatId: id, name: ids.length > 1 ? `telegram-${i + 1}` : "telegram", fetchImpl })));
+  if (env.TG_BOT_TOKEN) ids.forEach((id, i) => list.push(telegramChannel({ token: env.TG_BOT_TOKEN, chatId: id, apiBase: /^https:\/\/[a-z0-9.\-]+(:\d+)?(\/[\w\-./]*)?$/i.test(env.TG_API_BASE || "") ? env.TG_API_BASE.replace(/\/$/, "") : undefined, name: ids.length > 1 ? `telegram-${i + 1}` : "telegram", fetchImpl })));
   return list;
 }
 

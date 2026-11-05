@@ -2,14 +2,15 @@
 //   node --env-file=/opt/finikfix/shared/.env scripts/telegram-check.mjs          # getMe + проверка чатов (getChat)
 //   node --env-file=... scripts/telegram-check.mjs --send                          # + одно тестовое сообщение каждому получателю
 const token = process.env.TG_BOT_TOKEN || "", ids = String(process.env.TG_CHAT_ID || "").split(",").map((s) => s.trim()).filter(Boolean);
+const base = /^https:\/\/[a-z0-9.\-]+(:\d+)?(\/[\w\-./]*)?$/i.test(process.env.TG_API_BASE || "") ? process.env.TG_API_BASE.replace(/\/$/, "") : "https://api.telegram.org";
 const scrub = (t) => String(t).split(token).join("***");
 if (!token || !ids.length) { console.log("НЕ НАСТРОЕНО: нужны TG_BOT_TOKEN и TG_CHAT_ID"); process.exit(2); }
 async function api(method, body) {
   try {
-    const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(10000) });
+    const r = await fetch(`${base}/bot${token}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(10000) });
     const j = await r.json().catch(() => ({}));
     return { ok: !!j.ok, status: r.status, result: j.result, description: j.description };
-  } catch (e) { return { ok: false, status: 0, description: scrub(e.message) }; }
+  } catch (e) { return { ok: false, status: 0, description: scrub(e.message) + (e.cause ? ` (${scrub(e.cause.code || e.cause.message || e.cause)})` : "") }; }
 }
 let bad = 0;
 const me = await api("getMe");
