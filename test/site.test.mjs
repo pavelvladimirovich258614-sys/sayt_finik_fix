@@ -197,3 +197,17 @@ test("версионные адреса картинок кэшируются н
     assert.equal(r.status, 200); assert.match(r.headers.get("cache-control"), /immutable/); assert.equal(r.headers.get("content-type"), "image/webp");
   } finally { app.closeAllConnections?.(); app.close(); }
 });
+
+test("кривые адреса не роняют сервер (400, процесс жив)", async () => {
+  const net = await import("node:net");
+  const dir = mkdtempSync(join(tmpdir(), "ff-"));
+  const app = createApp({ DATA_DIR: dir });
+  await new Promise((r) => app.listen(0, "127.0.0.1", r));
+  const port = app.address().port;
+  const raw = (path) => new Promise((res) => { const s = net.connect(port, "127.0.0.1", () => s.write(`GET ${path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n`)); let b = ""; s.on("data", (d) => (b += d)); s.on("close", () => res(b.split(" ")[1])); });
+  try {
+    assert.equal(await raw("//interactsh.com%2f.."), "400");
+    assert.ok(["400", "404"].includes(await raw("//x//y")));
+    assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200, "сервер жив после плохих запросов");
+  } finally { app.closeAllConnections?.(); app.close(); }
+});
