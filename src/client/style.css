@@ -507,3 +507,11 @@ a.work-card{display:block;text-decoration:none;color:inherit}
 .hc-stats span{font-size:13px}
 @media(max-width:1100px){.hc-stats{max-width:none}.hc-stats li{padding:14px 10px}.hc-stats b{font-size:22px}.hc-stats span{font-size:12px}}
 .calc-lines{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+
+/* v16: калькуляторы в начале страниц (решение Никиты 2026-11-09) */
+#calc,#promo,#promo-sec,#sticks{scroll-margin-top:76px}
+.calc-first{padding:28px 0 40px}
+.calc-first .lead{margin-bottom:14px}
+.stick-first{padding:28px 0 40px}
+.page-hero:has(+ .stick-first){padding:28px 0 8px;border-bottom:0}
+@media(max-width:560px){.calc-first{padding:20px 0 32px}.stick-first{padding:16px 0 32px}.page-hero:has(+ .stick-first){padding:20px 0 4px}}

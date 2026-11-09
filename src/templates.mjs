@@ -20,7 +20,6 @@ export const relatedWorks = (slug) => workCats[slug] ? `<section class="alt"><di
 
 export const faqBlock = (faq) => `<div class="faq">${faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>`;
 
-export const noInternet = `<div class="card warn reveal"><span class="tag">Чего я НЕ делаю</span><h3>Не настраиваю интернет на дому</h3><p>Только ремонт цифровой техники. Выезд возможен по договорённости, но не для настройки интернета.</p></div>`;
 
 export function photoBlock(o, cls = "") {
   return o.hasPhoto
@@ -86,21 +85,22 @@ const emailLink = () => `<a href="mailto:${site.email}">${site.email}</a>`;
 
 // Сравнение стиков и акция. Цены указаны за ОДИН аналог (подтверждено заказчиком); цены только «от».
 const fmtRub = (n) => rub(n);
-export function sticksBlock() {
+export function sticksBlock(part = "all") {
   const opts = stickTypes.map((t) => [t.name, t.price]);
   const defA = 0, defB = 4; // по умолчанию Original + Gulikit: 1 000 + 2 500 = 3 500, скидка 525, итого 2 975
   const r = pairTotal(opts[defA][1], opts[defB][1]);
   const options = (sel) => opts.map(([n, pr], i) => `<option value="${i}"${i === sel ? " selected" : ""}>${esc(n)} — ${fmtRub(pr)}</option>`).join("");
-  return `<section class="alt" id="sticks"><div class="wrap">
-  <span class="eyebrow reveal">Замена стиков</span><h2 class="reveal">Какие стики я ставлю</h2>
+  const info = `<span class="eyebrow reveal">Замена стиков</span><h2 class="reveal">Какие стики я ставлю</h2>
   <p class="lead reveal">Подберу вариант под ваш геймпад и бюджет. Цена указана <b>${stickUnit}</b>.</p>
   <div class="stick-tech">${Object.values(stickTech).map((t) => `<div class="card reveal"><span class="ico">${icon("stick", 26)}</span><span class="tag-s">${esc(t.tag)}</span><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`).join("")}</div>
   <div class="stick-opts">${stickTypes.map((t) => `<div class="card stick-opt reveal"><span class="tag-s">${esc(stickTech[t.tech].title)}</span><h3>${esc(t.name)}</h3><p class="big">${rub(t.price)}</p><span class="unit">${stickUnit}</span></div>`).join("")}</div>
-  <div class="promo reveal" id="promo" data-discount="${promos.pairDiscount.percent}">
+`;
+  const hd = part === "promo" ? "h2" : "h3";
+  const promoHtml = `<div class="promo reveal" id="promo" data-discount="${promos.pairDiscount.percent}">
     <div class="promo-badge" aria-hidden="true">−${promos.pairDiscount.percent}%</div>
     <div class="promo-body">
       <span class="eyebrow">Акция</span>
-      <h3>Замена двух аналогов — скидка ${promos.pairDiscount.percent}%</h3>
+      <${hd}>Замена двух аналогов — скидка ${promos.pairDiscount.percent}%</${hd}>
       <p>${esc(promos.pairDiscount.text)} Формула: (цена первого + цена второго) × 0,85.</p>
       <div class="promo-calc">
         <label>Первый аналог<select id="pr-a">${options(defA)}</select></label>
@@ -112,24 +112,25 @@ export function sticksBlock() {
       ${contactBtns()}
     </div>
   </div>
-  <p class="free-clean reveal">${icon("shield", 22)}<span><b>Бесплатная внутренняя чистка.</b> ${esc(promos.freeCleaning.text)}</span></p>
-  <p class="note reveal">Цены не являются публичной офертой. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>
-</div></section>`;
+  <p class="free-clean reveal">${icon("shield", 22)}<span><b>Бесплатная внутренняя чистка.</b> ${esc(promos.freeCleaning.text)}</span></p>`;
+  const noteHtml = `<p class="note reveal">Цены не являются публичной офертой. Ни одна технология не отменяет механический износ геймпада, поэтому я называю вариант и цену заранее, а не обещаю «навсегда». Гарантия на работу — 90 дней.</p>`;
+  if (part === "promo") return `<section class="stick-first" id="promo-sec"><div class="wrap">${promoHtml}</div></section>`;
+  if (part === "info") return `<section class="alt" id="sticks"><div class="wrap">${info}${noteHtml}</div></section>`;
+  return `<section class="alt" id="sticks"><div class="wrap">${info}${promoHtml}${noteHtml}</div></section>`;
 }
 
 export function contactSection(title = "Связаться со мной") {
   return `<section id="contact" class="alt"><div class="wrap two">
   <div class="reveal"><span class="eyebrow">Связь</span><h2>${esc(title)}</h2>
   <p class="lead">Позвоните или напишите в мессенджер в рабочее время (${site.hours}): подскажу по цене и срокам. ${esc(diagnostics.short)}</p>
-  <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li></ul>
-  <p class="note">Не настраиваю интернет на дому.</p></div>
+  <ul class="ticks"><li>Гарантия 90 дней</li><li>Договор, расписка или акт</li></ul></div>
   <div class="reveal">${contactBtns({ cls: "stack" })}</div>
   </div></section>`;
 }
 
-export function calcSection() {
-  return `<section id="calc"><div class="wrap">
-  <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">Сколько стоит ремонт</h2><p class="lead reveal">Выберите, что ремонтируем, модель и услугу. Цены фиксированные; где объём работ неизвестен, цену называю после диагностики.</p>
+export function calcSection({ first = false } = {}) {
+  return `<section id="calc"${first ? ' class="calc-first"' : ""}><div class="wrap">
+  <span class="eyebrow reveal">Калькулятор</span><h2 class="reveal">${first ? "Рассчитайте стоимость ремонта" : "Сколько стоит ремонт"}</h2><p class="lead reveal">Выберите, что ремонтируем, модель и услугу. Цены фиксированные; где объём работ неизвестен, цену называю после диагностики.</p>
   <div class="calc reveal" id="calc-box">
   <label for="c-cat">Что ремонтируем</label><select id="c-cat"></select>
   <div id="c-model-row"><label for="c-model" id="c-model-l">Модель</label><select id="c-model"></select></div>
@@ -257,6 +258,14 @@ export function homePage(o) {
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена: PS4 и Xbox One — 4 500 ₽, PS5 — 6 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Обслуживание системы охлаждения: PS4 — 3 500 ₽, PS5 — 4 000 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание и плату. Стоимость ремонта — после диагностики."], ["/remont-gamepadov/", "Не заряжается", "Замена аккумулятора геймпада — 2 000 ₽ (аккумулятор входит в цену)."]];
   const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Диагностика", "Находим причину. Бесплатно, если вы соглашаетесь на ремонт; при отказе — 1 000 ₽ и акт дефектации."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
+${calcSection({ first: true })}
+
+<section class="trust" id="trust"><div class="wrap">
+  <span class="eyebrow reveal">Мастер</span><h2 class="reveal">Почему мне доверяют ремонт</h2>
+  <div class="trust-grid">${trustCards.map(([ic, t, p]) => `<article class="card trust-card reveal"><span class="ico lg">${icon(ic, 32)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p></article>`).join("")}</div>
+  <p class="cat-more reveal"><a class="btn" href="#calc" data-goal="calc">Узнать стоимость ремонта</a></p>
+</div></section>
+
 <section class="hero hero-c hs"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
 ${heroSlider()}
 <div class="wrap hc-grid">
@@ -265,7 +274,7 @@ ${heroSlider()}
     <h1 class="reveal">Ремонт <span class="o">консолей, геймпадов, смартфонов и ноутбуков</span> в&nbsp;Ангарске и&nbsp;Иркутске<span class="h1-tail"> — бесплатная диагностика, гарантия до 90 дней</span></h1>
     <p class="hero-p reveal">Не включается Xbox? Дрифтит стик на DualSense? Перегревается PS5? Починю за один визит — с прозрачной ценой и гарантией. Работаю с PlayStation, Xbox, Nintendo, геймпадами, ноутбуками, ПК и смартфонами.</p>
     <div class="hero-cta reveal"><button type="button" class="cbtn cb-req" data-cb hidden>${brandIcon("call", 22)}<span>Оставить заявку</span></button><a class="cbtn cb-call" href="tel:${site.phoneRaw}" data-goal="call">${brandIcon("call", 22)}<span>Позвонить: ${site.phone}</span></a></div>
-    <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт (при отказе — 1 000 ₽, выдаю акт дефектации). Выезд по договорённости. На дому интернет не настраиваю — только ремонт техники.</p>
+    <p class="hero-note reveal">Бесплатная диагностика при согласии на ремонт (при отказе — 1 000 ₽, выдаю акт дефектации). Выезд по договорённости.</p>
     <div class="hero-alt reveal" aria-label="Другие способы связи"><button type="button" class="cbtn cb-copy" data-copy="${site.phoneRaw}" data-copy-label="${site.phone}" aria-label="Скопировать номер ${site.phone}"><span>Скопировать номер</span></button>${site.max ? `<a class="cbtn cb-max" href="${esc(site.max)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("max", 22)}<span>MAX</span></a>` : ""}<a class="cbtn cb-tg" href="${esc(site.telegram)}" target="_blank" rel="noopener noreferrer" data-goal="messenger">${brandIcon("tg", 22)}<span>Telegram</span></a></div>
     <ul class="chips reveal"><li>Договор, расписка или акт</li><li>Приём по записи</li></ul>
     <ul class="hc-stats reveal" aria-label="Коротко о мастере"><li><b>10+</b><span>лет с консолями</span></li><li><b>90</b><span>дней гарантии</span></li></ul>
@@ -273,12 +282,6 @@ ${heroSlider()}
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
 </section>
-
-<section class="trust" id="trust"><div class="wrap">
-  <span class="eyebrow reveal">Мастер</span><h2 class="reveal">Почему мне доверяют ремонт</h2>
-  <div class="trust-grid">${trustCards.map(([ic, t, p]) => `<article class="card trust-card reveal"><span class="ico lg">${icon(ic, 32)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p></article>`).join("")}</div>
-  <p class="cat-more reveal"><a class="btn" href="#calc" data-goal="calc">Узнать стоимость ремонта</a></p>
-</div></section>
 
 <section id="services"><div class="wrap">
   <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтируем</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальную технику тоже принимаю в мастерской.</p>
@@ -310,12 +313,10 @@ ${heroSlider()}
   <div class="tools reveal"><h3>Как я ремонтирую</h3><ul>${tools.map(([ic, t]) => `<li>${icon(ic, 34)}<span>${t}</span></li>`).join("")}</ul></div>
 </div></section>
 
-<section class="alt"><div class="wrap two">
+<section class="alt"><div class="wrap">
   <div class="reveal"><span class="eyebrow">Скупка</span><h2>Скупка техники</h2><p class="lead">Куплю консоли, ноутбуки, комплектующие в любом состоянии — даже нерабочие. Оформляю по расписке или акту приёмки.</p><a class="btn" href="/skupka/">Условия скупки</a></div>
-  ${noInternet}
 </div></section>
 
-${calcSection()}
 ${videoSection()}
 
 <section class="alt"><div class="wrap">
@@ -343,7 +344,7 @@ export function categoryPage(c, o) {
  ${contactBtns()}</div></section>
 ${c.noprices ? "" : `<section><div class="wrap"><span class="eyebrow">Цены</span><h2>Услуги и цены</h2>${priceTable(items)}<p class="note">${c.priceNote ? esc(c.priceNote) + " " : ""}${esc(priceNote)}</p></div></section>`}
 ${c.more ? `<section><div class="wrap two"><div><span class="eyebrow">Что делаю</span><h2>Что ещё ремонтирую</h2><ul class="ticks">${c.more.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.devices ? `<p class="note">${esc(c.devices)}</p>` : ""}</div><div><span class="eyebrow">Как всё устроено</span><h2>Порядок работы</h2><div class="grid one steps">${c.process.map(([h, p]) => `<div class="card reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join("")}</div></div></div></section>` : ""}
-<section class="alt"><div class="wrap two"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div>${noInternet}</div></section>
+<section class="alt"><div class="wrap"><div><span class="eyebrow">Подход</span><h2>Чем отличается ремонт</h2><ul class="ticks">${c.diff.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>${c.links.length ? `<p>${c.links.map(([s, t]) => `<a href="/${s}/">${esc(t)} →</a>`).join("<br>")}</p>` : ""}</div></div></section>
 ${c.slug === "remont-gamepadov" ? sticksBlock() : ""}
 ${contactSection()}
 <section><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(c.faq)}</div></section>
@@ -354,10 +355,11 @@ ${relatedWorks(c.slug)}`;
 export function narrowPage(n, o) {
   const body = `${crumbs(n.h1)}
 <section class="page-hero"><div class="wrap"><span class="badge">${esc(n.cat)}</span><h1>${esc(n.h1)}</h1></div></section>
+${n.slug === "zamena-stika-gamepada" ? sticksBlock("promo") : ""}
+${n.slug === "zamena-stika-gamepada" ? sticksBlock("info") : ""}
 <section><div class="wrap article">${n.sections.map(([h, t]) => `<h2 class="reveal">${esc(h)}</h2><p class="reveal">${esc(t)}</p>`).join("")}
  <p><a href="/${n.back[0]}/">${esc(n.back[1])} →</a></p></div></section>
 ${relatedWorks(n.slug)}
-${n.slug === "zamena-stika-gamepada" ? sticksBlock() : ""}
 ${contactSection()}
 <section class="alt"><div class="wrap"><span class="eyebrow">FAQ</span><h2>Частые вопросы</h2>${faqBlock(n.faq)}</div></section>`;
   return layout({ ...o, path: `/${n.slug}/`, title: n.title + ` — ${site.brand}`, desc: n.desc, body, jsonld: [n.slug === "zamena-stika-gamepada" ? stickServiceLd(n.h1, n.desc) : serviceLd(n.h1, n.desc), faqLd(n.faq)] });
@@ -427,8 +429,7 @@ export function contactsPage(o) {
   <div class="card reveal"><h3>Мессенджеры</h3><p><a href="${waLink}" target="_blank" rel="noopener" data-goal="messenger">WhatsApp</a> · <a href="${site.telegram}" target="_blank" rel="noopener" data-goal="messenger">Telegram</a> · <a href="${site.vk}" target="_blank" rel="noopener">ВКонтакте</a> · <a href="${site.channel}" target="_blank" rel="noopener">Telegram-канал</a></p></div>
   <div class="card reveal"><h3>Почта</h3><p>${emailLink()}</p></div>
   <div class="card reveal"><h3>Режим работы</h3><p>${site.hours}</p></div>
-  <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div>
-  ${noInternet}</div><div class="reveal">${contactBtns({ wa: true, cls: "stack" })}</div></div></section>`;
+  <div class="card reveal"><h3>Где</h3><p>${site.city}, ${site.place}</p></div></div><div class="reveal">${contactBtns({ wa: true, cls: "stack" })}</div></div></section>`;
   return layout({ ...o, path: "/kontakty/", title: pagesOther.contacts.title, desc: pagesOther.contacts.desc, body });
 }
 
