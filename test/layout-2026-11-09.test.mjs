@@ -88,3 +88,17 @@ test("отзывы: страница и источник на месте", () =>
   assert.ok(h.includes("Авито"));
   assert.equal((h.match(/<h1[ >]/g) || []).length, 1);
 });
+
+test("мобильная панель: нижний отступ не обнуляется при включённых заявках, фокус оставляет поля над панелью", () => {
+  const css = readFileSync(join(import.meta.dirname, "..", "src", "client", "style.css"), "utf8");
+  // body.has-cb добавляется при включённых заявках; он не должен убирать отступ под fixed-панель
+  assert.ok(!/body\.has-cb,\.mbar-on\{padding-bottom:0\}/.test(css), "нижний отступ обнулён");
+  assert.match(css, /body\.has-cb,\.mbar-on\{padding-bottom:calc\(56px \+ env\(safe-area-inset-bottom\)\)\}/);
+  assert.match(css, /html\{scroll-padding-bottom:calc\(52px \+ env\(safe-area-inset-bottom\) \+ 20px\)\}/);
+  assert.match(css, /\.mbar\{display:flex;position:fixed;[^}]*z-index:45/, "панель остаётся и ниже модального окна (dialog в верхнем слое)");
+  for (const p of ["index.html", "zamena-stika-gamepada/index.html"]) {
+    const h = html(p);
+    assert.equal((h.match(/class="mbar"/g) || []).length, 1, p);
+    for (const t of ["Позвонить", "Telegram", "MAX", "Заявка"]) assert.ok(/<nav class="mbar"[\s\S]*?<\/nav>/.exec(h)[0].includes(t), `${p}: ${t}`);
+  }
+});
