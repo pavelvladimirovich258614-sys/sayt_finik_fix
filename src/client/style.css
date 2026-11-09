@@ -409,13 +409,16 @@ h3{font-size:17px;line-height:1.25;font-weight:700}
 .cbtn.cb-req{border:0;font:inherit;cursor:pointer}
 .mbar{display:none}
 @media(max-width:700px){
- body.has-cb,.mbar-on{padding-bottom:0}
+ body.has-cb,.mbar-on{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;gap:1px;background:var(--line2);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -6px 20px rgba(0,0,0,.5)}
  .mbar a,.mbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;background:#10141b;color:var(--tx);font:600 12px/1.2 inherit;border:0;text-decoration:none;cursor:pointer}
  .mbar button{background:var(--ac,#ff7a1a);color:#111}
  .mbar button[hidden]{display:none}
  .float{display:none}
  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+ /* Нижняя панель (52 px + safe-area) не должна закрывать поля: фокус, Tab и scrollIntoView оставляют элемент над панелью */
+ html{scroll-padding-bottom:calc(52px + env(safe-area-inset-bottom) + 20px)}
+ .calc select,.calc input,.calc .btn,.calc .res,.calc-lines,.promo select,.promo-res,.promo .btn{scroll-margin-bottom:12px}
  .ck{bottom:calc(64px + env(safe-area-inset-bottom))}
 }
 .rv-list{display:grid;gap:14px;margin-top:16px}.rv-stats{margin-top:12px}
