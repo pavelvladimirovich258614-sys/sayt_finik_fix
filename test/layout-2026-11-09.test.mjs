@@ -24,24 +24,29 @@ test("«Чего я НЕ делаю» и настройка интернета: 
   }
 });
 
-test("главная: калькулятор первый в DOM, затем «Почему мне доверяют ремонт», затем остальное", () => {
+test("главная: Hero первый, затем калькулятор, затем «Почему мне доверяют ремонт», затем остальное без изменений", () => {
   const h = html("index.html");
   const body = h.slice(at(h, "<main"));
-  const sections = [...body.matchAll(/<section[^>]*>/g)];
-  assert.match(sections[0][0], /id="calc"/, "первая секция — калькулятор");
-  assert.match(sections[1][0], /id="trust"/, "вторая секция — доверие");
-  const calc = at(h, 'id="calc"'), trust = at(h, 'id="trust"');
-  assert.ok(calc < trust);
-  for (const marker of ['class="hero hero-c', 'id="services"', 'id="works-home"', "Частые проблемы", "Как я работаю", "<h2>Скупка техники</h2>", 'id="contact"'])
-    assert.ok(calc < at(h, marker) && trust < at(h, marker), marker);
-  assert.equal((h.match(/id="calc"/g) || []).length, 1, "калькулятор не дублируется");
-  assert.equal((h.match(/<h1[ >]/g) || []).length, 1);
-  assert.equal((h.match(/class="card trust-card/g) || []).length, 6);
-  assert.ok(h.includes('class="hero hero-c'), "Hero сохранён");
-  assert.ok(/hs-slides/.test(h), "слайдер сохранён");
-  assert.ok(h.includes("Скупка техники") && h.includes("Куплю консоли, ноутбуки, комплектующие"), "блок скупки сохранён");
-  assert.match(h, /id="c-cat"/); assert.match(h, /id="c-req"/);
+  const sections = [...body.matchAll(/<section[^>]*>/g)].map((m) => m[0]);
+  assert.match(sections[0], /class="hero hero-c hs"/, "первая секция — Hero");
+  assert.match(sections[1], /id="calc"/, "вторая секция — калькулятор");
+  assert.match(sections[2], /id="trust"/, "третья секция — «Почему мне доверяют ремонт»");
+  // остальные разделы остаются в прежнем порядке
+  const rest = ['id="services"', 'id="works-home"', "Частые проблемы", "promo-strip-sec", "Как я работаю", "<h2>Скупка техники</h2>", 'id="video"', "Реальные работы и отзывы", 'id="contact"'];
+  let prev = at(h, 'id="trust"');
+  for (const marker of rest) { const i = at(h, marker); assert.ok(i > prev, `${marker} идёт после предыдущего раздела`); prev = i; }
+  // Hero целиком в первой секции: H1, слайдер, кнопки, фото
+  const hero = body.slice(0, body.indexOf('id="calc"'));
+  assert.equal((h.match(/<h1[ >]/g) || []).length, 1, "ровно один H1");
+  assert.ok(hero.includes("<h1") && hero.includes("hs-slides") && hero.includes("hero-cta") && hero.includes("hc-stats"), "H1, слайдер, кнопки и показатели внутри Hero");
+  assert.ok(/<img[^>]+slide-0/.test(hero), "фото слайдера в Hero");
+  assert.equal((h.match(/id="calc"/g) || []).length, 1, "ровно один общий калькулятор");
+  assert.equal((h.match(/class="card trust-card/g) || []).length, 6, "шесть карточек преимуществ");
+  assert.ok(h.includes("Куплю консоли, ноутбуки, комплектующие") && h.includes("<h2>Скупка техники</h2>"), "блок скупки сохранён");
+  assert.match(h, /id="c-cat"/); assert.match(h, /id="c-req"/); assert.match(h, /data-cb-calc/, "заявка из калькулятора");
   assert.match(h, /href="\/zamena-stika-gamepada\/#promo"/, "ссылка на акцию");
+  assert.match(h, /href="\/#calc"/, "ссылка меню «Калькулятор»");
+  assert.ok(/id="services"/.test(h), "якорь #services");
 });
 
 test("страница замены стиков: калькулятор скидки идёт до статьи и описания технологий", () => {
