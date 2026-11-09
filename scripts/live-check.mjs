@@ -135,11 +135,19 @@ for (const [w, h, touch] of calcViewports.filter(([ww, hh]) => !process.env.VP |
 
   // --- А. Главная: общий калькулятор
   await p.goto(SITE + "/", { waitUntil: "networkidle" }); await p.waitForTimeout(500);
-  const order = await p.evaluate(() => { const s = [...document.querySelectorAll("main section")].map((x) => x.id || x.className); return { first: s[0], second: s[1], h1Before: !!document.querySelector("#calc")?.compareDocumentPosition(document.querySelector("h1")) && !(document.querySelector("#calc").compareDocumentPosition(document.querySelector("h1")) & Node.DOCUMENT_POSITION_PRECEDING) }; });
-  ok(order.first === "calc" && order.second === "trust", `${name} /: первая секция — калькулятор, вторая — «Почему мне доверяют» (${order.first}, ${order.second})`);
-  const hdrB = await p.evaluate(() => Math.round(document.querySelector(".hdr").getBoundingClientRect().bottom));
-  const calcTop = await p.evaluate(() => Math.round(document.querySelector("#calc").getBoundingClientRect().top));
-  ok(calcTop <= hdrB + 4, `${name} /: калькулятор начинается сразу под шапкой (${calcTop} px, шапка до ${hdrB})`);
+  const order = await p.evaluate(() => { const s = [...document.querySelectorAll("main section")]; return { a: s[0]?.className, b: s[1]?.id, c: s[2]?.id, d: s[3]?.id, scrollY: Math.round(scrollY), h1: document.querySelectorAll("h1").length, calcs: document.querySelectorAll("#calc").length, cards: document.querySelectorAll(".trust-card").length, slides: document.querySelectorAll(".hs-slide").length }; });
+  ok(/hero/.test(order.a) && order.b === "calc" && order.c === "trust" && order.d === "services", `${name} /: порядок секций Hero → калькулятор → преимущества → услуги (${order.a}, ${order.b}, ${order.c}, ${order.d})`);
+  ok(order.scrollY === 0 && order.h1 === 1 && order.calcs === 1 && order.cards === 6 && order.slides >= 6, `${name} /: без якоря страница открыта сверху (scrollY ${order.scrollY}), H1 ${order.h1}, калькуляторов ${order.calcs}, карточек ${order.cards}, слайдов ${order.slides}`);
+  const top = await p.evaluate(() => { const hdr = document.querySelector(".hdr").getBoundingClientRect().bottom, hero = document.querySelector(".hero").getBoundingClientRect(), calc = document.querySelector("#calc").getBoundingClientRect().top + scrollY, trust = document.querySelector("#trust").getBoundingClientRect().top + scrollY, heroBottom = hero.bottom + scrollY; return { heroTop: Math.round(hero.top), hdr: Math.round(hdr), gap: Math.round(calc - heroBottom), trustGap: Math.round(trust - (document.querySelector("#calc").getBoundingClientRect().bottom + scrollY)), img: [...document.querySelectorAll(".hero img")].filter((i) => i.complete && i.naturalWidth === 0 && i.src).length }; });
+  ok(top.heroTop <= top.hdr + 4, `${name} /: Hero начинается сразу под шапкой (${top.heroTop} px, шапка до ${top.hdr})`);
+  ok(top.gap >= -1 && top.gap <= 4 && top.trustGap >= -1 && top.trustGap <= 4 && top.img === 0, `${name} /: между Hero, калькулятором и преимуществами нет лишних блоков (зазоры ${top.gap}/${top.trustGap} px), битых картинок Hero ${top.img}`);
+  // Якоря: #calc и #services ведут к своим разделам
+  for (const [anchor, sel] of [["#calc", "#calc h2"], ["#services", "#services h2"]]) {
+    await p.goto(SITE + "/" + anchor, { waitUntil: "networkidle" }); await p.waitForTimeout(900);
+    const y = await p.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); const hdr = document.querySelector(".hdr").getBoundingClientRect().bottom; return { top: Math.round(r.top), hdr: Math.round(hdr), vh: innerHeight }; }, sel);
+    ok(y.top >= y.hdr - 2 && y.top < y.vh * 0.6, `${name} /${anchor}: заголовок раздела виден под шапкой (${y.top} px, шапка до ${y.hdr})`);
+  }
+  await p.goto(SITE + "/", { waitUntil: "networkidle" }); await p.waitForTimeout(500);
   await p.selectOption("#c-cat", { label: "Игровые консоли" });
   await p.selectOption("#c-model", { label: "PlayStation 5" });
   await p.selectOption("#c-srv", { label: "Замена HDMI-порта" });

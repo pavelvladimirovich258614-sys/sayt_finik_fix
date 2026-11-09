@@ -258,14 +258,6 @@ export function homePage(o) {
   const problems = [["/zamena-stika-gamepada/", "Дрифт стика", "Курсор уезжает сам. Заменю аналог, поставлю датчики Холла."], ["/zamena-hdmi-konsoli/", "Картинка только в наклоне", "Изношен HDMI-порт. Замена: PS4 и Xbox One — 4 500 ₽, PS5 — 6 500 ₽."], ["/remont-playstation/", "Перегрев и шум", "Обслуживание системы охлаждения: PS4 — 3 500 ₽, PS5 — 4 000 ₽."], ["/remont-xbox/", "Не включается", "Проверю питание и плату. Стоимость ремонта — после диагностики."], ["/remont-gamepadov/", "Не заряжается", "Замена аккумулятора геймпада — 2 000 ₽ (аккумулятор входит в цену)."]];
   const steps = [["Обращение", "Позвоните или напишите в MAX или Telegram."], ["Диагностика", "Находим причину. Бесплатно, если вы соглашаетесь на ремонт; при отказе — 1 000 ₽ и акт дефектации."], ["Согласование цены", "Называю точную стоимость. Без вашего согласия не начинаю."], ["Ремонт и выдача", "Договор или расписка, гарантия 90 дней."]];
   const body = `
-${calcSection({ first: true })}
-
-<section class="trust" id="trust"><div class="wrap">
-  <span class="eyebrow reveal">Мастер</span><h2 class="reveal">Почему мне доверяют ремонт</h2>
-  <div class="trust-grid">${trustCards.map(([ic, t, p]) => `<article class="card trust-card reveal"><span class="ico lg">${icon(ic, 32)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p></article>`).join("")}</div>
-  <p class="cat-more reveal"><a class="btn" href="#calc" data-goal="calc">Узнать стоимость ремонта</a></p>
-</div></section>
-
 <section class="hero hero-c hs"><div class="hero-bg" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i></div>
 ${heroSlider()}
 <div class="wrap hc-grid">
@@ -282,6 +274,14 @@ ${heroSlider()}
 </div>
 <div class="marquee" aria-hidden="true"><div class="track">${[0, 1].map(() => `<span>${["PlayStation", "Xbox", "Nintendo Switch", "DualSense", "Joy-Con", "Steam Deck", "Ноутбуки", "Смартфоны", "ПК", "Скупка"].map((x) => `<em>${x}</em>`).join("")}</span>`).join("")}</div></div>
 </section>
+
+${calcSection({ first: true })}
+
+<section class="trust" id="trust"><div class="wrap">
+  <span class="eyebrow reveal">Мастер</span><h2 class="reveal">Почему мне доверяют ремонт</h2>
+  <div class="trust-grid">${trustCards.map(([ic, t, p]) => `<article class="card trust-card reveal"><span class="ico lg">${icon(ic, 32)}</span><h3>${esc(t)}</h3><p>${esc(p)}</p></article>`).join("")}</div>
+  <p class="cat-more reveal"><a class="btn" href="#calc" data-goal="calc">Узнать стоимость ремонта</a></p>
+</div></section>
 
 <section id="services"><div class="wrap">
   <span class="eyebrow reveal">Услуги</span><h2 class="reveal">Что ремонтируем</h2><p class="lead reveal">Основное направление — консоли и геймпады. Остальную технику тоже принимаю в мастерской.</p>
